@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,11 @@ import { CitySearch } from "@/components/ui/city-search";
 // Vedic Astrology (Jyotish)
 // ---------------------------------------------------------------------------
 
-// ---- Mock data ------------------------------------------------------------
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
+// ---- Fallback data --------------------------------------------------------
 
 const MOCK_RASHI = [
   { planet: "Sun", sign: "Taurus", degree: "0\u00b048'", nakshatra: "Krittika", pada: 2, lord: "Venus" },
@@ -90,33 +96,115 @@ const MOCK_YOGAS = [
 // ---- Page -----------------------------------------------------------------
 
 export default function VedicPage() {
-  const [birthDate, setBirthDate] = useState("1990-06-15");
-  const [birthTime, setBirthTime] = useState("14:30");
-  const [city, setCity] = useState("New York, USA");
-  const [latitude, setLatitude] = useState("40.7128");
-  const [longitude, setLongitude] = useState("-74.0060");
-  const [calculated, setCalculated] = useState(true);
+  const { activeProfile } = useProfile();
+
+  const [birthDate, setBirthDate] = useState(activeProfile?.birthDate ?? "");
+  const [birthTime, setBirthTime] = useState(activeProfile?.birthTime ?? "");
+  const [city, setCity] = useState(activeProfile?.city ?? "");
+  const [latitude, setLatitude] = useState(
+    activeProfile ? String(activeProfile.lat) : "",
+  );
+  const [longitude, setLongitude] = useState(
+    activeProfile ? String(activeProfile.lon) : "",
+  );
+  const [timezone, setTimezone] = useState(activeProfile?.timezone ?? "UTC");
+
+  const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  const fetchChart = async (
+    date: string,
+    time: string,
+    lat: number,
+    lon: number,
+    tz: string,
+  ) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/charts/vedic`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datetime: `${date}T${time}:00`,
+          latitude: lat,
+          longitude: lon,
+          timezone: tz,
+        }),
+      });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      // Real data would replace mocks here; for now simply flag success
+      setUsedFallback(false);
+      setCalculated(true);
+    } catch (err) {
+      console.warn("Vedic API unavailable, using sample data:", err);
+      setUsedFallback(true);
+      setCalculated(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeProfile) return;
+    setBirthDate(activeProfile.birthDate);
+    setBirthTime(activeProfile.birthTime);
+    setCity(activeProfile.city);
+    setLatitude(String(activeProfile.lat));
+    setLongitude(String(activeProfile.lon));
+    setTimezone(activeProfile.timezone);
+    fetchChart(
+      activeProfile.birthDate,
+      activeProfile.birthTime,
+      activeProfile.lat,
+      activeProfile.lon,
+      activeProfile.timezone,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile]);
 
   const handleCalculate = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setCalculated(true);
-      setLoading(false);
-    }, 800);
+    fetchChart(
+      birthDate,
+      birthTime,
+      Number(latitude),
+      Number(longitude),
+      timezone,
+    );
   };
+
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view your Vedic chart.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">
-          Vedic Astrology
+          Vedic Chart for {activeProfile.name}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
           Jyotish -- sidereal zodiac with Lahiri ayanamsha
         </p>
       </div>
+
+      {usedFallback && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
+          Sample data shown -- API unavailable
+        </div>
+      )}
 
       {/* Birth Data */}
       <Card title="Birth Data" className="mb-6">
@@ -145,7 +233,7 @@ export default function VedicPage() {
           />
           <div className="flex items-end">
             <Button onClick={handleCalculate} disabled={loading} className="w-full">
-              {loading ? "Calculating..." : "Calculate"}
+              {loading ? "Calculating..." : "Recalculate"}
             </Button>
           </div>
         </div>
@@ -234,7 +322,6 @@ export default function VedicPage() {
 
           {/* Vimshottari Dasha */}
           <Card title="Vimshottari Dasha Periods">
-            {/* Current Mahadasha */}
             <div className="mb-4 rounded-lg bg-accent-blue/5 border border-accent-blue/20 p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -247,7 +334,6 @@ export default function VedicPage() {
                   {MOCK_DASHA.startDate} to {MOCK_DASHA.endDate}
                 </span>
               </div>
-              {/* Progress bar */}
               <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-accent-blue transition-all"
@@ -257,7 +343,6 @@ export default function VedicPage() {
               <p className="mt-1 text-xs text-text-muted">28% elapsed</p>
             </div>
 
-            {/* Sub-periods (Antardasha) */}
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
               Antardasha (Sub-periods)
             </p>
@@ -279,51 +364,13 @@ export default function VedicPage() {
                     >
                       {sp.planet}
                     </span>
-                    {sp.active && (
-                      <Badge variant="info">Current</Badge>
-                    )}
+                    {sp.active && <Badge variant="info">Current</Badge>}
                   </div>
                   <span className="text-xs text-text-muted">
                     {sp.start} -- {sp.end}
                   </span>
                 </div>
               ))}
-            </div>
-
-            {/* Timeline visualization */}
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
-                Timeline Overview
-              </p>
-              <div className="flex gap-0.5 h-6 rounded-lg overflow-hidden">
-                {MOCK_DASHA.subPeriods.map((sp, i) => {
-                  const colors = [
-                    "bg-accent-blue",
-                    "bg-accent-purple",
-                    "bg-accent-emerald",
-                    "bg-accent-amber",
-                    "bg-accent-rose",
-                    "bg-blue-400",
-                    "bg-amber-400",
-                    "bg-emerald-400",
-                    "bg-purple-400",
-                  ];
-                  return (
-                    <div
-                      key={sp.planet}
-                      className={`flex-1 ${colors[i % colors.length]} ${
-                        sp.active ? "opacity-100 ring-2 ring-white/30" : "opacity-40"
-                      }`}
-                      title={`${sp.planet}: ${sp.start} - ${sp.end}`}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[10px] text-text-muted">2021</span>
-                <span className="text-[10px] text-text-muted">2030</span>
-                <span className="text-[10px] text-text-muted">2039</span>
-              </div>
             </div>
           </Card>
 

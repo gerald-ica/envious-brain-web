@@ -30,8 +30,16 @@ type Provider = "openai" | "anthropic" | "openrouter";
 // Constants
 // ---------------------------------------------------------------------------
 
-const WELCOME_MESSAGE =
+const DEFAULT_WELCOME =
   "I am the Oracle, a 27-expert ensemble intelligence. Ask me about your charts, personality, transits, or any aspect of your cosmic blueprint.";
+
+function buildWelcomeMessage(name?: string | null): string {
+  if (!name) return DEFAULT_WELCOME;
+  return `Welcome, ${name}. I am the Oracle, a 27-expert ensemble intelligence. Ask me about your charts, personality, transits, or any aspect of your cosmic blueprint.`;
+}
+
+// Backwards-compatible constant (used by sample sessions without access to profile)
+const WELCOME_MESSAGE = DEFAULT_WELCOME;
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   openai: "OpenAI",
@@ -507,7 +515,7 @@ export default function OraclePage() {
         {
           id: generateId(),
           role: "assistant",
-          content: WELCOME_MESSAGE,
+          content: buildWelcomeMessage(activeProfile?.name),
           timestamp: new Date(),
         },
       ],
@@ -517,7 +525,7 @@ export default function OraclePage() {
     setStreamedContent("");
     setIsTyping(false);
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [provider]);
+  }, [provider, activeProfile]);
 
   // -- Delete session
   const deleteSession = useCallback(
@@ -590,7 +598,7 @@ export default function OraclePage() {
           {
             id: generateId(),
             role: "assistant",
-            content: WELCOME_MESSAGE,
+            content: buildWelcomeMessage(activeProfile?.name),
             timestamp: new Date(),
           },
         ],
@@ -633,7 +641,7 @@ export default function OraclePage() {
       const responseText = getOracleResponse(text);
       typewriterEffect(responseText, sessionId!);
     }, 800);
-  }, [inputValue, isTyping, activeSessionId, provider, typewriterEffect]);
+  }, [inputValue, isTyping, activeSessionId, provider, typewriterEffect, activeProfile]);
 
   // -- Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -832,9 +840,13 @@ export default function OraclePage() {
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-blue/10 mb-6">
                     <OracleIcon className="h-8 w-8 text-accent-blue" />
                   </div>
-                  <h2 className="text-xl font-bold text-text-primary mb-2">The Oracle Awaits</h2>
+                  <h2 className="text-xl font-bold text-text-primary mb-2">
+                    {activeProfile
+                      ? `Welcome, ${activeProfile.name}`
+                      : "The Oracle Awaits"}
+                  </h2>
                   <p className="text-sm text-text-muted text-center max-w-md mb-8">
-                    {WELCOME_MESSAGE}
+                    {DEFAULT_WELCOME}
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2 max-w-lg w-full">
                     {[

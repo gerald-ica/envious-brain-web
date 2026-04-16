@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,10 @@ import { CitySearch } from "@/components/ui/city-search";
 // ---------------------------------------------------------------------------
 // Synastry
 // ---------------------------------------------------------------------------
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
 // ---- Mock data ------------------------------------------------------------
 
@@ -52,7 +58,7 @@ const HARMONY_BADGE: Record<string, "healthy" | "info" | "neutral" | "degraded">
 // ---- Circular gauge component ---------------------------------------------
 
 function CompatibilityGauge({ score }: { score: number }) {
-  const circumference = 2 * Math.PI * 54; // radius 54
+  const circumference = 2 * Math.PI * 54;
   const offset = circumference - (score / 100) * circumference;
   const color =
     score >= 75
@@ -68,7 +74,6 @@ function CompatibilityGauge({ score }: { score: number }) {
         viewBox="0 0 120 120"
         aria-label={`Compatibility score: ${score}%`}
       >
-        {/* Background circle */}
         <circle
           cx="60"
           cy="60"
@@ -77,7 +82,6 @@ function CompatibilityGauge({ score }: { score: number }) {
           stroke="rgba(255,255,255,0.05)"
           strokeWidth="8"
         />
-        {/* Score arc */}
         <circle
           cx="60"
           cy="60"
@@ -102,100 +106,234 @@ function CompatibilityGauge({ score }: { score: number }) {
 // ---- Page -----------------------------------------------------------------
 
 export default function SynastryPage() {
-  // Person A
-  const [dateA, setDateA] = useState("1990-06-15");
-  const [timeA, setTimeA] = useState("14:30");
-  const [cityA, setCityA] = useState("New York, USA");
-  const [latA, setLatA] = useState("40.7128");
-  const [lonA, setLonA] = useState("-74.0060");
+  const { activeProfile, profiles } = useProfile();
 
-  // Person B
+  // Person B can be: a stored profile (by id) or "manual"
+  const otherProfiles = profiles.filter((p) => p.id !== activeProfile?.id);
+  const [personBMode, setPersonBMode] = useState<"profile" | "manual">(
+    otherProfiles.length > 0 ? "profile" : "manual",
+  );
+  const [personBId, setPersonBId] = useState<string | null>(
+    otherProfiles[0]?.id ?? null,
+  );
+
+  // Manual Person B inputs
   const [dateB, setDateB] = useState("1992-11-08");
   const [timeB, setTimeB] = useState("09:15");
   const [cityB, setCityB] = useState("Los Angeles, USA");
   const [latB, setLatB] = useState("34.0522");
   const [lonB, setLonB] = useState("-118.2437");
 
-  const [calculated, setCalculated] = useState(true);
+  const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
 
-  const handleCalculate = () => {
+  // Selected Person B profile (when in profile mode)
+  const personBProfile = personBId
+    ? profiles.find((p) => p.id === personBId)
+    : null;
+
+  const fetchSynastry = async () => {
+    if (!activeProfile) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const personA = {
+        datetime: `${activeProfile.birthDate}T${activeProfile.birthTime}:00`,
+        latitude: activeProfile.lat,
+        longitude: activeProfile.lon,
+        timezone: activeProfile.timezone,
+      };
+      const personB =
+        personBMode === "profile" && personBProfile
+          ? {
+              datetime: `${personBProfile.birthDate}T${personBProfile.birthTime}:00`,
+              latitude: personBProfile.lat,
+              longitude: personBProfile.lon,
+              timezone: personBProfile.timezone,
+            }
+          : {
+              datetime: `${dateB}T${timeB}:00`,
+              latitude: Number(latB),
+              longitude: Number(lonB),
+              timezone: "UTC",
+            };
+
+      const res = await fetch(`${API_URL}/api/v1/charts/synastry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ person_a: personA, person_b: personB }),
+      });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      setUsedFallback(false);
       setCalculated(true);
+    } catch (err) {
+      console.warn("Synastry API unavailable, using sample data:", err);
+      setUsedFallback(true);
+      setCalculated(true);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+
+  useEffect(() => {
+    if (!activeProfile) return;
+    fetchSynastry();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile, personBId, personBMode]);
+
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to start a synastry comparison.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Synastry</h1>
+        <h1 className="text-2xl font-bold text-text-primary">
+          Synastry for {activeProfile.name}
+        </h1>
         <p className="mt-1 text-sm text-text-muted">
           Relationship compatibility through cross-chart aspect analysis
         </p>
       </div>
 
-      {/* Two Birth Data Forms Side by Side */}
+      {usedFallback && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
+          Sample data shown -- API unavailable
+        </div>
+      )}
+
+      {/* Two Birth Data panels side by side */}
       <div className="grid gap-4 lg:grid-cols-2 mb-6">
-        <Card title="Person A" glow="blue">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="Birth Date"
-              type="date"
-              value={dateA}
-              onChange={(e) => setDateA(e.target.value)}
-            />
-            <Input
-              label="Birth Time"
-              type="time"
-              value={timeA}
-              onChange={(e) => setTimeA(e.target.value)}
-            />
-            <CitySearch
-              label="Birth City"
-              value={cityA}
-              onChange={(c) => {
-                setCityA(c.name);
-                setLatA(String(c.lat));
-                setLonA(String(c.lon));
-              }}
-              placeholder="Search for a city..."
-            />
+        {/* Person A -- activeProfile (locked) */}
+        <Card title={`Person A -- ${activeProfile.name}`} glow="blue">
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between rounded-lg bg-white/[0.02] px-3 py-2">
+              <span className="text-text-muted">Birth Date</span>
+              <span className="text-text-primary font-medium">
+                {activeProfile.birthDate}
+              </span>
+            </div>
+            <div className="flex justify-between rounded-lg bg-white/[0.02] px-3 py-2">
+              <span className="text-text-muted">Birth Time</span>
+              <span className="text-text-primary font-medium">
+                {activeProfile.birthTime}
+              </span>
+            </div>
+            <div className="flex justify-between rounded-lg bg-white/[0.02] px-3 py-2">
+              <span className="text-text-muted">Location</span>
+              <span className="text-text-primary font-medium">
+                {activeProfile.city}
+              </span>
+            </div>
+            <p className="text-xs text-text-muted pt-1">
+              Person A is always your active profile. Change it from Settings.
+            </p>
           </div>
         </Card>
 
+        {/* Person B -- profile picker or manual */}
         <Card title="Person B" glow="purple">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              label="Birth Date"
-              type="date"
-              value={dateB}
-              onChange={(e) => setDateB(e.target.value)}
-            />
-            <Input
-              label="Birth Time"
-              type="time"
-              value={timeB}
-              onChange={(e) => setTimeB(e.target.value)}
-            />
-            <CitySearch
-              label="Birth City"
-              value={cityB}
-              onChange={(c) => {
-                setCityB(c.name);
-                setLatB(String(c.lat));
-                setLonB(String(c.lon));
-              }}
-              placeholder="Search for a city..."
-            />
-          </div>
+          {otherProfiles.length > 0 && (
+            <div className="mb-3 flex gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setPersonBMode("profile")}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                  personBMode === "profile"
+                    ? "bg-accent-purple/20 text-accent-purple"
+                    : "bg-white/5 text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Select Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => setPersonBMode("manual")}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                  personBMode === "manual"
+                    ? "bg-accent-purple/20 text-accent-purple"
+                    : "bg-white/5 text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Manual Entry
+              </button>
+            </div>
+          )}
+
+          {personBMode === "profile" && otherProfiles.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-secondary">
+                Choose Profile
+              </label>
+              <select
+                value={personBId ?? ""}
+                onChange={(e) => setPersonBId(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue/50"
+              >
+                {otherProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} -- {p.birthDate}
+                  </option>
+                ))}
+              </select>
+              {personBProfile && (
+                <div className="mt-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between rounded bg-white/[0.02] px-2 py-1.5">
+                    <span className="text-text-muted">Birth</span>
+                    <span className="text-text-primary">
+                      {personBProfile.birthDate} at {personBProfile.birthTime}
+                    </span>
+                  </div>
+                  <div className="flex justify-between rounded bg-white/[0.02] px-2 py-1.5">
+                    <span className="text-text-muted">Location</span>
+                    <span className="text-text-primary">{personBProfile.city}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Birth Date"
+                type="date"
+                value={dateB}
+                onChange={(e) => setDateB(e.target.value)}
+              />
+              <Input
+                label="Birth Time"
+                type="time"
+                value={timeB}
+                onChange={(e) => setTimeB(e.target.value)}
+              />
+              <CitySearch
+                label="Birth City"
+                value={cityB}
+                onChange={(c) => {
+                  setCityB(c.name);
+                  setLatB(String(c.lat));
+                  setLonB(String(c.lon));
+                }}
+                placeholder="Search for a city..."
+              />
+            </div>
+          )}
         </Card>
       </div>
 
       <div className="mb-6">
-        <Button onClick={handleCalculate} disabled={loading} className="w-full sm:w-auto">
+        <Button onClick={fetchSynastry} disabled={loading} className="w-full sm:w-auto">
           {loading ? "Analyzing Compatibility..." : "Compare Charts"}
         </Button>
       </div>
@@ -204,7 +342,6 @@ export default function SynastryPage() {
         <div className="animate-fade-in space-y-6">
           {/* Compatibility Score + Summary */}
           <div className="grid gap-4 lg:grid-cols-3">
-            {/* Big Circular Gauge */}
             <Card className="flex flex-col items-center justify-center" glow="blue">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Compatibility Score
@@ -218,7 +355,6 @@ export default function SynastryPage() {
               </p>
             </Card>
 
-            {/* Score breakdown */}
             <Card title="Score Breakdown" className="lg:col-span-2">
               <div className="space-y-4">
                 {[
@@ -301,9 +437,7 @@ export default function SynastryPage() {
                           variant={
                             a.significance === "Very Strong"
                               ? "info"
-                              : a.significance === "Strong"
-                                ? "neutral"
-                                : "neutral"
+                              : "neutral"
                           }
                         >
                           {a.significance}

@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
 // Personality Synthesis -- Unified Profile
@@ -117,11 +120,28 @@ function ThemeBar({ value, color }: { value: number; color: string }) {
 // ---- Page -----------------------------------------------------------------
 
 export default function SynthesisPage() {
+  const { activeProfile } = useProfile();
+
   const priorityColor = (p: string) => {
     if (p === "high") return "degraded";
     if (p === "medium") return "info";
     return "neutral";
   };
+
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view your unified personality synthesis.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -129,7 +149,7 @@ export default function SynthesisPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-2xl font-bold text-text-primary">
-            Personality Synthesis
+            Synthesis for {activeProfile.name}
           </h1>
           <Badge variant="healthy">7 Systems</Badge>
         </div>

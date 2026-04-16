@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,11 @@ import { CitySearch } from "@/components/ui/city-search";
 // Western Natal Chart
 // ---------------------------------------------------------------------------
 
-// ---- Mock data ------------------------------------------------------------
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
+// ---- Fallback / sample data -----------------------------------------------
 
 const MOCK_PLANETS = [
   { planet: "Sun", sign: "Gemini", degree: "24\u00b0 12'", house: 10, retrograde: false },
@@ -41,19 +47,6 @@ const MOCK_ASPECTS = [
   { planet1: "Uranus", aspect: "Conjunct", planet2: "Neptune", orb: "5\u00b014'", type: "info" as const },
 ];
 
-const MOCK_ELEMENTS = [
-  { name: "Fire", count: 2, color: "bg-accent-rose" },
-  { name: "Earth", count: 4, color: "bg-accent-emerald" },
-  { name: "Air", count: 3, color: "bg-accent-blue" },
-  { name: "Water", count: 3, color: "bg-accent-purple" },
-];
-
-const MOCK_MODALITIES = [
-  { name: "Cardinal", count: 3, color: "bg-accent-rose" },
-  { name: "Fixed", count: 4, color: "bg-accent-amber" },
-  { name: "Mutable", count: 5, color: "bg-accent-blue" },
-];
-
 const MOCK_HOUSES = [
   { house: 1, sign: "Virgo", degree: "15\u00b022'" },
   { house: 2, sign: "Libra", degree: "11\u00b008'" },
@@ -69,6 +62,150 @@ const MOCK_HOUSES = [
   { house: 12, sign: "Leo", degree: "20\u00b041'" },
 ];
 
+const ELEMENT_BY_SIGN: Record<string, "Fire" | "Earth" | "Air" | "Water"> = {
+  Aries: "Fire", Leo: "Fire", Sagittarius: "Fire",
+  Taurus: "Earth", Virgo: "Earth", Capricorn: "Earth",
+  Gemini: "Air", Libra: "Air", Aquarius: "Air",
+  Cancer: "Water", Scorpio: "Water", Pisces: "Water",
+};
+
+const MODALITY_BY_SIGN: Record<string, "Cardinal" | "Fixed" | "Mutable"> = {
+  Aries: "Cardinal", Cancer: "Cardinal", Libra: "Cardinal", Capricorn: "Cardinal",
+  Taurus: "Fixed", Leo: "Fixed", Scorpio: "Fixed", Aquarius: "Fixed",
+  Gemini: "Mutable", Virgo: "Mutable", Sagittarius: "Mutable", Pisces: "Mutable",
+};
+
+// ---- API response types ---------------------------------------------------
+
+interface ApiPlanetPosition {
+  longitude: number;
+  sign: string;
+  degree_in_sign: number;
+  speed: number;
+  retrograde: boolean;
+}
+
+interface ApiAspect {
+  planet1: string;
+  planet2: string;
+  type: string;
+  angle: number;
+  orb: number;
+  applying: boolean;
+}
+
+interface ApiHouse {
+  number: number;
+  degree: number;
+  sign: string;
+  degree_in_sign: number;
+}
+
+interface ApiWesternResponse {
+  positions: Record<string, ApiPlanetPosition>;
+  aspects: ApiAspect[];
+  houses: ApiHouse[];
+}
+
+// ---- Display types (used by rendering) ------------------------------------
+
+interface PlanetRow {
+  planet: string;
+  sign: string;
+  degree: string;
+  house: number;
+  retrograde: boolean;
+}
+
+interface AspectRow {
+  planet1: string;
+  aspect: string;
+  planet2: string;
+  orb: string;
+  type: "healthy" | "degraded" | "info";
+}
+
+interface HouseRow {
+  house: number;
+  sign: string;
+  degree: string;
+}
+
+interface ChartDisplay {
+  planets: PlanetRow[];
+  aspects: AspectRow[];
+  houses: HouseRow[];
+}
+
+// ---- Helpers --------------------------------------------------------------
+
+function formatDegree(deg: number): string {
+  const d = Math.floor(deg);
+  const m = Math.floor((deg - d) * 60);
+  return `${d}\u00b0 ${String(m).padStart(2, "0")}'`;
+}
+
+function findHouseForLongitude(lon: number, houses: ApiHouse[]): number {
+  // Houses are sorted by number (1..12), each starts at `degree`.
+  for (let i = 0; i < houses.length; i++) {
+    const start = houses[i].degree;
+    const end = houses[(i + 1) % houses.length].degree;
+    if (start < end) {
+      if (lon >= start && lon < end) return houses[i].number;
+    } else {
+      // wraps around 360
+      if (lon >= start || lon < end) return houses[i].number;
+    }
+  }
+  return houses[0]?.number ?? 1;
+}
+
+const ASPECT_TYPE: Record<string, "healthy" | "degraded" | "info"> = {
+  trine: "healthy",
+  sextile: "healthy",
+  conjunction: "info",
+  opposition: "degraded",
+  square: "degraded",
+  quincunx: "degraded",
+  "semi-sextile": "info",
+  sesquiquadrate: "degraded",
+};
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function mapApiToDisplay(api: ApiWesternResponse): ChartDisplay {
+  const planets: PlanetRow[] = Object.entries(api.positions).map(
+    ([name, p]) => ({
+      planet: name,
+      sign: p.sign,
+      degree: formatDegree(p.degree_in_sign),
+      house: findHouseForLongitude(p.longitude, api.houses),
+      retrograde: p.retrograde,
+    }),
+  );
+  const aspects: AspectRow[] = api.aspects.map((a) => ({
+    planet1: a.planet1,
+    aspect: capitalize(a.type),
+    planet2: a.planet2,
+    orb: `${a.orb.toFixed(2)}\u00b0`,
+    type: ASPECT_TYPE[a.type] ?? "info",
+  }));
+  const houses: HouseRow[] = api.houses.map((h) => ({
+    house: h.number,
+    sign: h.sign,
+    degree: formatDegree(h.degree_in_sign),
+  }));
+  return { planets, aspects, houses };
+}
+
+const MOCK_DISPLAY: ChartDisplay = {
+  planets: MOCK_PLANETS,
+  aspects: MOCK_ASPECTS,
+  houses: MOCK_HOUSES,
+};
+
 // ---- Distribution bar component -------------------------------------------
 
 function DistributionBar({
@@ -82,7 +219,7 @@ function DistributionBar({
   total: number;
   color: string;
 }) {
-  const pct = Math.round((count / total) * 100);
+  const pct = total === 0 ? 0 : Math.round((count / total) * 100);
   return (
     <div className="flex items-center gap-3">
       <span className="w-20 text-xs text-text-muted">{label}</span>
@@ -102,37 +239,152 @@ function DistributionBar({
 // ---- Page -----------------------------------------------------------------
 
 export default function WesternChartPage() {
-  const [birthDate, setBirthDate] = useState("1990-06-15");
-  const [birthTime, setBirthTime] = useState("14:30");
-  const [city, setCity] = useState("New York, USA");
-  const [latitude, setLatitude] = useState("40.7128");
-  const [longitude, setLongitude] = useState("-74.0060");
-  const [calculated, setCalculated] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const { activeProfile } = useProfile();
 
-  const handleCalculate = () => {
+  // Form state mirrors activeProfile but remains editable
+  const [birthDate, setBirthDate] = useState(activeProfile?.birthDate ?? "");
+  const [birthTime, setBirthTime] = useState(activeProfile?.birthTime ?? "");
+  const [city, setCity] = useState(activeProfile?.city ?? "");
+  const [latitude, setLatitude] = useState(
+    activeProfile ? String(activeProfile.lat) : "",
+  );
+  const [longitude, setLongitude] = useState(
+    activeProfile ? String(activeProfile.lon) : "",
+  );
+  const [timezone, setTimezone] = useState(
+    activeProfile?.timezone ?? "UTC",
+  );
+
+  const [chartData, setChartData] = useState<ChartDisplay | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  const fetchChart = async (
+    date: string,
+    time: string,
+    lat: number,
+    lon: number,
+    tz: string,
+  ) => {
     setLoading(true);
-    // Simulate API call delay
-    setTimeout(() => {
-      setCalculated(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/charts/western`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datetime: `${date}T${time}:00`,
+          latitude: lat,
+          longitude: lon,
+          timezone: tz,
+        }),
+      });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const json = (await res.json()) as ApiWesternResponse;
+      setChartData(mapApiToDisplay(json));
+      setUsedFallback(false);
+    } catch (err) {
+      console.warn("Chart API unavailable, using sample data:", err);
+      setChartData(MOCK_DISPLAY);
+      setUsedFallback(true);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
-  const totalPlanets = MOCK_ELEMENTS.reduce((sum, e) => sum + e.count, 0);
-  const totalModality = MOCK_MODALITIES.reduce((sum, m) => sum + m.count, 0);
+  // Auto-fetch / re-sync when activeProfile changes
+  useEffect(() => {
+    if (!activeProfile) return;
+    setBirthDate(activeProfile.birthDate);
+    setBirthTime(activeProfile.birthTime);
+    setCity(activeProfile.city);
+    setLatitude(String(activeProfile.lat));
+    setLongitude(String(activeProfile.lon));
+    setTimezone(activeProfile.timezone);
+    fetchChart(
+      activeProfile.birthDate,
+      activeProfile.birthTime,
+      activeProfile.lat,
+      activeProfile.lon,
+      activeProfile.timezone,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile]);
+
+  const handleCalculate = () => {
+    fetchChart(
+      birthDate,
+      birthTime,
+      Number(latitude),
+      Number(longitude),
+      timezone,
+    );
+  };
+
+  // Empty state: no profile
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view your Western natal chart.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
+  // Compute element/modality distribution from loaded data
+  const planets = chartData?.planets ?? [];
+  const coreCount = planets.filter((p) =>
+    ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"].includes(p.planet),
+  );
+  const elementCounts: Record<"Fire" | "Earth" | "Air" | "Water", number> = {
+    Fire: 0, Earth: 0, Air: 0, Water: 0,
+  };
+  const modalityCounts: Record<"Cardinal" | "Fixed" | "Mutable", number> = {
+    Cardinal: 0, Fixed: 0, Mutable: 0,
+  };
+  for (const p of coreCount) {
+    const e = ELEMENT_BY_SIGN[p.sign];
+    const m = MODALITY_BY_SIGN[p.sign];
+    if (e) elementCounts[e]++;
+    if (m) modalityCounts[m]++;
+  }
+  const elementEntries = [
+    { name: "Fire", count: elementCounts.Fire, color: "bg-accent-rose" },
+    { name: "Earth", count: elementCounts.Earth, color: "bg-accent-emerald" },
+    { name: "Air", count: elementCounts.Air, color: "bg-accent-blue" },
+    { name: "Water", count: elementCounts.Water, color: "bg-accent-purple" },
+  ];
+  const modalityEntries = [
+    { name: "Cardinal", count: modalityCounts.Cardinal, color: "bg-accent-rose" },
+    { name: "Fixed", count: modalityCounts.Fixed, color: "bg-accent-amber" },
+    { name: "Mutable", count: modalityCounts.Mutable, color: "bg-accent-blue" },
+  ];
+  const totalPlanets = coreCount.length;
+  const totalModality = coreCount.length;
 
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">
-          Western Natal Chart
+          Western Chart for {activeProfile.name}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
           Tropical zodiac -- Placidus house system
         </p>
       </div>
+
+      {/* Fallback banner */}
+      {usedFallback && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
+          Sample data shown -- API unavailable
+        </div>
+      )}
 
       {/* Birth Data Form */}
       <Card title="Birth Data" className="mb-6">
@@ -161,13 +413,13 @@ export default function WesternChartPage() {
           />
           <div className="flex items-end">
             <Button onClick={handleCalculate} disabled={loading} className="w-full">
-              {loading ? "Calculating..." : "Calculate"}
+              {loading ? "Calculating..." : "Recalculate"}
             </Button>
           </div>
         </div>
       </Card>
 
-      {calculated && (
+      {chartData && (
         <div className="animate-fade-in space-y-6">
           {/* Planet Positions */}
           <Card title="Planet Positions">
@@ -183,7 +435,7 @@ export default function WesternChartPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_PLANETS.map((p) => (
+                  {chartData.planets.map((p) => (
                     <tr
                       key={p.planet}
                       className="border-b border-border/50 last:border-0"
@@ -229,7 +481,7 @@ export default function WesternChartPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {MOCK_ASPECTS.map((a, i) => (
+                    {chartData.aspects.map((a, i) => (
                       <tr
                         key={i}
                         className="border-b border-border/50 last:border-0"
@@ -257,7 +509,7 @@ export default function WesternChartPage() {
             <div className="space-y-4">
               <Card title="Element Distribution">
                 <div className="space-y-3">
-                  {MOCK_ELEMENTS.map((e) => (
+                  {elementEntries.map((e) => (
                     <DistributionBar
                       key={e.name}
                       label={e.name}
@@ -271,7 +523,7 @@ export default function WesternChartPage() {
 
               <Card title="Modality Distribution">
                 <div className="space-y-3">
-                  {MOCK_MODALITIES.map((m) => (
+                  {modalityEntries.map((m) => (
                     <DistributionBar
                       key={m.name}
                       label={m.name}
@@ -288,7 +540,7 @@ export default function WesternChartPage() {
           {/* House Cusps */}
           <Card title="House Cusps">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {MOCK_HOUSES.map((h) => (
+              {chartData.houses.map((h) => (
                 <div
                   key={h.house}
                   className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-2.5"

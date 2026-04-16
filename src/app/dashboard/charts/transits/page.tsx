@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CitySearch } from "@/components/ui/city-search";
 
 // ---------------------------------------------------------------------------
 // Transits
 // ---------------------------------------------------------------------------
 
-// ---- Mock data ------------------------------------------------------------
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
+// ---- Fallback data --------------------------------------------------------
 
 const MOCK_TRANSITS = [
   { planet: "Sun", sign: "Aries", degree: "26\u00b014'", speed: "0\u00b059'/day", retrograde: false },
@@ -59,42 +63,88 @@ const SIGNIFICANCE_BADGE: Record<string, "error" | "degraded" | "neutral"> = {
 // ---- Page -----------------------------------------------------------------
 
 export default function TransitsPage() {
-  const [birthDate, setBirthDate] = useState("1990-06-15");
-  const [birthTime, setBirthTime] = useState("14:30");
-  const [city, setCity] = useState("New York, USA");
-  const [latitude, setLatitude] = useState("40.7128");
-  const [longitude, setLongitude] = useState("-74.0060");
-  const [calculated, setCalculated] = useState(true);
+  const { activeProfile } = useProfile();
+
+  const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  const fetchTransits = useCallback(async () => {
+    if (!activeProfile) return;
+    setLoading(true);
+    try {
+      const today = new Date().toISOString().slice(0, 19);
+      const res = await fetch(`${API_URL}/api/v1/charts/transits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datetime: today,
+          latitude: activeProfile.lat,
+          longitude: activeProfile.lon,
+          timezone: activeProfile.timezone,
+        }),
+      });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      setUsedFallback(false);
+      setCalculated(true);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.warn("Transits API unavailable, using sample data:", err);
+      setUsedFallback(true);
+      setCalculated(true);
+      setLastUpdated(new Date());
+    } finally {
+      setLoading(false);
+    }
+  }, [activeProfile]);
 
   // Auto-refresh timer
   useEffect(() => {
     if (!autoRefresh || !calculated) return;
     const interval = setInterval(() => {
       setLastUpdated(new Date());
-    }, 60000); // refresh every minute
+    }, 60000);
     return () => clearInterval(interval);
   }, [autoRefresh, calculated]);
 
-  const handleCalculate = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setCalculated(true);
-      setLoading(false);
-      setLastUpdated(new Date());
-    }, 800);
-  };
+  useEffect(() => {
+    if (!activeProfile) return;
+    fetchTransits();
+  }, [activeProfile, fetchTransits]);
+
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view transits against your natal chart.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
+  const today = new Date().toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Transits</h1>
+          <h1 className="text-2xl font-bold text-text-primary">
+            Transits for {activeProfile.name} -- Today
+          </h1>
           <p className="mt-1 text-sm text-text-muted">
-            Current planetary positions and aspects to your natal chart
+            {today} -- current planetary positions and aspects to your natal chart
           </p>
         </div>
         {calculated && (
@@ -120,48 +170,48 @@ export default function TransitsPage() {
         )}
       </div>
 
-      {/* Birth Data Form */}
+      {usedFallback && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
+          Sample data shown -- API unavailable
+        </div>
+      )}
+
+      {/* Natal Reference Card */}
       <Card title="Natal Reference" className="mb-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Input
-            label="Birth Date"
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-          />
-          <Input
-            label="Birth Time"
-            type="time"
-            value={birthTime}
-            onChange={(e) => setBirthTime(e.target.value)}
-          />
-          <CitySearch
-            label="Birth City"
-            value={city}
-            onChange={(c) => {
-              setCity(c.name);
-              setLatitude(String(c.lat));
-              setLongitude(String(c.lon));
-            }}
-            placeholder="Search for a city..."
-          />
-          <div className="flex items-end">
-            <Button onClick={handleCalculate} disabled={loading} className="w-full">
-              {loading ? "Loading..." : "Load Transits"}
-            </Button>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-white/[0.02] px-4 py-3">
+            <p className="text-xs text-text-muted">Birth Date</p>
+            <p className="text-sm font-medium text-text-primary">
+              {activeProfile.birthDate}
+            </p>
           </div>
+          <div className="rounded-lg bg-white/[0.02] px-4 py-3">
+            <p className="text-xs text-text-muted">Birth Time</p>
+            <p className="text-sm font-medium text-text-primary">
+              {activeProfile.birthTime}
+            </p>
+          </div>
+          <div className="rounded-lg bg-white/[0.02] px-4 py-3">
+            <p className="text-xs text-text-muted">Location</p>
+            <p className="text-sm font-medium text-text-primary">
+              {activeProfile.city}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button onClick={fetchTransits} disabled={loading}>
+            {loading ? "Loading..." : "Refresh Transits"}
+          </Button>
         </div>
       </Card>
 
       {calculated && (
         <div className="animate-fade-in space-y-6">
-          {/* Last updated indicator */}
           <div className="flex items-center gap-2 text-xs text-text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-emerald" />
             Last updated: {lastUpdated.toLocaleTimeString()}
           </div>
 
-          {/* Current Transiting Positions */}
           <Card title="Current Planetary Positions">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -204,7 +254,6 @@ export default function TransitsPage() {
             </div>
           </Card>
 
-          {/* Aspects to Natal */}
           <Card title="Aspects to Natal Chart">
             <div className="space-y-2">
               {MOCK_ASPECTS_TO_NATAL.map((a, i) => (
@@ -238,9 +287,7 @@ export default function TransitsPage() {
             </div>
           </Card>
 
-          {/* Bottom row: Ingresses + Retrograde */}
           <div className="grid gap-4 lg:grid-cols-2">
-            {/* Upcoming Ingresses */}
             <Card title="Upcoming Ingresses">
               <div className="space-y-3">
                 {MOCK_INGRESSES.map((ing) => (
@@ -267,7 +314,6 @@ export default function TransitsPage() {
               </div>
             </Card>
 
-            {/* Retrograde Status */}
             <Card title="Retrograde Status">
               <div className="space-y-2">
                 {MOCK_TRANSITS.map((t) => (

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -189,6 +191,7 @@ function StrengthBar({
 // ---- Page -----------------------------------------------------------------
 
 export default function HarmonicsPage() {
+  const { activeProfile } = useProfile();
   const [selectedHarmonic, setSelectedHarmonic] = useState<HarmonicData>(
     HARMONICS[0],
   );
@@ -200,13 +203,28 @@ export default function HarmonicsPage() {
     return "bg-gradient-to-r from-accent-rose to-accent-rose/60";
   };
 
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view your harmonic chart analysis.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-2xl font-bold text-text-primary">
-            Harmonic Chart Analysis
+            Harmonic Analysis for {activeProfile.name}
           </h1>
           <Badge variant="info">Advanced</Badge>
         </div>

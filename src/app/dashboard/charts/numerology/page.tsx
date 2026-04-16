@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,52 +12,159 @@ import { Input } from "@/components/ui/input";
 // Numerology
 // ---------------------------------------------------------------------------
 
-// ---- Mock data ------------------------------------------------------------
+// ---- Pythagorean numerology values ---------------------------------------
 
-const MOCK_NUMBERS = {
-  lifePath: {
-    number: 7,
-    title: "The Seeker",
+const LETTER_VALUES: Record<string, number> = {
+  a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9,
+  j: 1, k: 2, l: 3, m: 4, n: 5, o: 6, p: 7, q: 8, r: 9,
+  s: 1, t: 2, u: 3, v: 4, w: 5, x: 6, y: 7, z: 8,
+};
+const VOWELS = new Set(["a", "e", "i", "o", "u"]);
+
+function reduceNumber(n: number): number {
+  // Keep master numbers 11, 22, 33
+  while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
+    n = String(n)
+      .split("")
+      .reduce((s, d) => s + Number(d), 0);
+  }
+  return n;
+}
+
+function lifePathFromBirth(birthDate: string): number {
+  // birthDate format "YYYY-MM-DD"
+  if (!birthDate) return 0;
+  const digits = birthDate.replace(/\D/g, "").split("").map(Number);
+  if (!digits.length) return 0;
+  const sum = digits.reduce((a, b) => a + b, 0);
+  return reduceNumber(sum);
+}
+
+function sumName(name: string, filter: (letter: string) => boolean): number {
+  const letters = name.toLowerCase().replace(/[^a-z]/g, "").split("");
+  const sum = letters
+    .filter(filter)
+    .reduce((s, l) => s + (LETTER_VALUES[l] ?? 0), 0);
+  return reduceNumber(sum);
+}
+
+function expressionNumber(name: string): number {
+  return sumName(name, () => true);
+}
+
+function soulUrgeNumber(name: string): number {
+  return sumName(name, (l) => VOWELS.has(l));
+}
+
+function personalityNumber(name: string): number {
+  return sumName(name, (l) => !VOWELS.has(l));
+}
+
+function personalYearNumber(birthDate: string, year: number): number {
+  if (!birthDate) return 0;
+  const [, mm, dd] = birthDate.split("-");
+  if (!mm || !dd) return 0;
+  const digits = (mm + dd + String(year)).split("").map(Number);
+  const sum = digits.reduce((a, b) => a + b, 0);
+  return reduceNumber(sum);
+}
+
+// ---- Number meanings -----------------------------------------------------
+
+interface NumberInfo {
+  title: string;
+  meaning: string;
+  keywords: string[];
+}
+
+const NUMBER_MEANINGS: Record<number, NumberInfo> = {
+  1: {
+    title: "The Leader",
     meaning:
-      "Life Path 7 is the path of the spiritual seeker and intellectual explorer. You are driven by a deep need to understand the mysteries of life. Analytical, introspective, and perceptive, you seek truth beneath the surface. Your journey involves balancing your rich inner world with meaningful connection to others.",
-    keywords: ["Introspection", "Analysis", "Spiritual", "Wisdom", "Mystery"],
+      "Number 1 is the path of the pioneer, leader, and original thinker. You are driven to carve your own direction and inspire independence in others.",
+    keywords: ["Leadership", "Independence", "Originality", "Drive"],
   },
-  expression: {
-    number: 5,
-    title: "The Freedom Seeker",
+  2: {
+    title: "The Diplomat",
     meaning:
-      "Expression 5 reveals a soul designed for versatility and adventure. You express yourself best through change, variety, and sensory experience. Your natural talents lie in communication, adaptability, and inspiring others to embrace freedom.",
-    keywords: ["Versatility", "Adventure", "Communication", "Change"],
+      "Number 2 resonates with partnership, cooperation, and sensitivity. You bring harmony to groups and excel at reading subtle emotional currents.",
+    keywords: ["Cooperation", "Harmony", "Sensitivity", "Balance"],
   },
-  soulUrge: {
-    number: 11,
-    title: "The Illuminator",
-    meaning:
-      "Soul Urge 11 is a Master Number. Your deepest desire is to inspire and uplift humanity. You carry an extraordinary sensitivity and intuition that, when channeled properly, can illuminate the path for others.",
-    keywords: ["Inspiration", "Intuition", "Vision", "Mastery"],
-    isMaster: true,
-  },
-  personality: {
-    number: 3,
+  3: {
     title: "The Communicator",
     meaning:
-      "Personality 3 presents you to the world as creative, expressive, and socially magnetic. Others see you as someone who brings joy, artistry, and a sense of play to any environment.",
-    keywords: ["Creative", "Expressive", "Social", "Joyful"],
+      "Number 3 is the path of self-expression, creativity, and joy. You uplift others through words, art, and social magnetism.",
+    keywords: ["Creativity", "Expression", "Joy", "Social"],
   },
-  personalYear: {
-    number: 9,
-    title: "Completion & Release",
+  4: {
+    title: "The Builder",
     meaning:
-      "Personal Year 9 is a year of endings, culmination, and letting go. It closes a nine-year cycle, asking you to release what no longer serves you to make room for the new cycle ahead.",
-    keywords: ["Completion", "Release", "Transformation", "Wisdom"],
+      "Number 4 is the path of structure, discipline, and foundations. You create enduring things through patience and methodical effort.",
+    keywords: ["Structure", "Discipline", "Foundation", "Reliability"],
+  },
+  5: {
+    title: "The Freedom Seeker",
+    meaning:
+      "Number 5 is the path of versatility and adventure. You express yourself through change, variety, and sensory experience.",
+    keywords: ["Versatility", "Adventure", "Freedom", "Change"],
+  },
+  6: {
+    title: "The Nurturer",
+    meaning:
+      "Number 6 is the path of responsibility, care, and devotion. You create beauty and harmony, often acting as healer or teacher for others.",
+    keywords: ["Nurture", "Responsibility", "Beauty", "Harmony"],
+  },
+  7: {
+    title: "The Seeker",
+    meaning:
+      "Number 7 is the path of the spiritual seeker and intellectual explorer. Analytical, introspective, and perceptive, you seek truth beneath the surface.",
+    keywords: ["Introspection", "Analysis", "Spiritual", "Wisdom"],
+  },
+  8: {
+    title: "The Achiever",
+    meaning:
+      "Number 8 is the path of power, ambition, and material mastery. You are built to manage resources, build enterprises, and lead in the world of form.",
+    keywords: ["Ambition", "Power", "Mastery", "Authority"],
+  },
+  9: {
+    title: "The Humanitarian",
+    meaning:
+      "Number 9 is the path of completion, compassion, and universal love. You feel called to serve something larger than yourself.",
+    keywords: ["Compassion", "Completion", "Wisdom", "Service"],
+  },
+  11: {
+    title: "The Illuminator",
+    meaning:
+      "Master Number 11. Your deepest vibration is to inspire and uplift humanity. An extraordinary sensitivity and intuition illuminates the path for others.",
+    keywords: ["Inspiration", "Intuition", "Vision", "Mastery"],
+  },
+  22: {
+    title: "The Master Builder",
+    meaning:
+      "Master Number 22. You are wired to manifest visionary ideas in concrete form, bridging the spiritual and material on a grand scale.",
+    keywords: ["Manifestation", "Vision", "Structure", "Legacy"],
+  },
+  33: {
+    title: "The Master Teacher",
+    meaning:
+      "Master Number 33. The rarest master number -- a path of selfless service, profound compassion, and teaching through embodiment.",
+    keywords: ["Service", "Compassion", "Teaching", "Embodiment"],
   },
 };
 
-const MASTER_NUMBERS = [
-  { number: 11, active: true, label: "The Illuminator" },
-  { number: 22, active: false, label: "The Master Builder" },
-  { number: 33, active: false, label: "The Master Teacher" },
-];
+function meaningFor(n: number): NumberInfo {
+  return (
+    NUMBER_MEANINGS[n] ?? {
+      title: "Unknown",
+      meaning: "Enter your full birth name and date to calculate this number.",
+      keywords: [],
+    }
+  );
+}
+
+function isMasterNumber(n: number): boolean {
+  return n === 11 || n === 22 || n === 33;
+}
 
 // ---- Number card component ------------------------------------------------
 
@@ -121,18 +230,82 @@ function NumberCard({
 // ---- Page -----------------------------------------------------------------
 
 export default function NumerologyPage() {
-  const [fullName, setFullName] = useState("Gerald Alexander");
-  const [birthDate, setBirthDate] = useState("1990-06-15");
-  const [calculated, setCalculated] = useState(true);
+  const { activeProfile } = useProfile();
+
+  const [fullName, setFullName] = useState(activeProfile?.name ?? "");
+  const [birthDate, setBirthDate] = useState(activeProfile?.birthDate ?? "");
+  const [calculated, setCalculated] = useState(
+    Boolean(activeProfile?.name && activeProfile?.birthDate),
+  );
   const [loading, setLoading] = useState(false);
+
+  // Re-sync inputs whenever the active profile changes
+  useEffect(() => {
+    if (activeProfile) {
+      setFullName(activeProfile.name);
+      setBirthDate(activeProfile.birthDate);
+      setCalculated(Boolean(activeProfile.name && activeProfile.birthDate));
+    }
+  }, [activeProfile]);
+
+  // Compute numbers reactively
+  const numbers = useMemo(() => {
+    const lifePath = lifePathFromBirth(birthDate);
+    const expression = expressionNumber(fullName);
+    const soulUrge = soulUrgeNumber(fullName);
+    const personality = personalityNumber(fullName);
+    const personalYear = personalYearNumber(birthDate, new Date().getFullYear());
+
+    const active = new Set<number>(
+      [lifePath, expression, soulUrge, personality, personalYear].filter(
+        isMasterNumber,
+      ),
+    );
+
+    return { lifePath, expression, soulUrge, personality, personalYear, active };
+  }, [fullName, birthDate]);
+
+  const currentYear = new Date().getFullYear();
 
   const handleCalculate = () => {
     setLoading(true);
     setTimeout(() => {
       setCalculated(true);
       setLoading(false);
-    }, 800);
+    }, 400);
   };
+
+  // Empty state -- no profile yet
+  if (!activeProfile && !fullName && !birthDate) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-text-primary">Numerology</h1>
+          <p className="text-sm text-text-muted">
+            Discover the hidden meaning in your name and birth date
+          </p>
+        </div>
+        <Card title="Create a profile" glow="blue">
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed text-text-secondary">
+              Add a profile with your full birth name and birth date to see
+              your Life Path, Expression, Soul Urge, Personality, and Personal
+              Year numbers.
+            </p>
+            <Link href="/dashboard/settings">
+              <Button>Add your first profile</Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  const lifePathInfo = meaningFor(numbers.lifePath);
+  const expressionInfo = meaningFor(numbers.expression);
+  const soulUrgeInfo = meaningFor(numbers.soulUrge);
+  const personalityInfo = meaningFor(numbers.personality);
+  const personalYearInfo = meaningFor(numbers.personalYear);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -176,10 +349,11 @@ export default function NumerologyPage() {
               Core Numbers
             </h2>
             <NumberCard
-              number={MOCK_NUMBERS.lifePath.number}
-              title={`Life Path ${MOCK_NUMBERS.lifePath.number}: ${MOCK_NUMBERS.lifePath.title}`}
-              meaning={MOCK_NUMBERS.lifePath.meaning}
-              keywords={MOCK_NUMBERS.lifePath.keywords}
+              number={numbers.lifePath}
+              title={`Life Path ${numbers.lifePath}: ${lifePathInfo.title}`}
+              meaning={lifePathInfo.meaning}
+              keywords={lifePathInfo.keywords}
+              isMaster={isMasterNumber(numbers.lifePath)}
               large
             />
           </div>
@@ -187,86 +361,92 @@ export default function NumerologyPage() {
           {/* Expression + Soul Urge + Personality */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <NumberCard
-              number={MOCK_NUMBERS.expression.number}
-              title={`Expression: ${MOCK_NUMBERS.expression.title}`}
-              meaning={MOCK_NUMBERS.expression.meaning}
-              keywords={MOCK_NUMBERS.expression.keywords}
+              number={numbers.expression}
+              title={`Expression: ${expressionInfo.title}`}
+              meaning={expressionInfo.meaning}
+              keywords={expressionInfo.keywords}
+              isMaster={isMasterNumber(numbers.expression)}
             />
             <NumberCard
-              number={MOCK_NUMBERS.soulUrge.number}
-              title={`Soul Urge: ${MOCK_NUMBERS.soulUrge.title}`}
-              meaning={MOCK_NUMBERS.soulUrge.meaning}
-              keywords={MOCK_NUMBERS.soulUrge.keywords}
-              isMaster={MOCK_NUMBERS.soulUrge.isMaster}
+              number={numbers.soulUrge}
+              title={`Soul Urge: ${soulUrgeInfo.title}`}
+              meaning={soulUrgeInfo.meaning}
+              keywords={soulUrgeInfo.keywords}
+              isMaster={isMasterNumber(numbers.soulUrge)}
             />
             <NumberCard
-              number={MOCK_NUMBERS.personality.number}
-              title={`Personality: ${MOCK_NUMBERS.personality.title}`}
-              meaning={MOCK_NUMBERS.personality.meaning}
-              keywords={MOCK_NUMBERS.personality.keywords}
+              number={numbers.personality}
+              title={`Personality: ${personalityInfo.title}`}
+              meaning={personalityInfo.meaning}
+              keywords={personalityInfo.keywords}
+              isMaster={isMasterNumber(numbers.personality)}
             />
           </div>
 
           {/* Master Number Indicators */}
           <Card title="Master Number Indicators">
             <div className="grid gap-4 sm:grid-cols-3">
-              {MASTER_NUMBERS.map((mn) => (
-                <div
-                  key={mn.number}
-                  className={`flex items-center gap-4 rounded-xl border p-4 ${
-                    mn.active
-                      ? "border-accent-purple/30 bg-accent-purple/10"
-                      : "border-border bg-white/[0.02] opacity-50"
-                  }`}
-                >
+              {[11, 22, 33].map((mn) => {
+                const active = numbers.active.has(mn);
+                const info = meaningFor(mn);
+                return (
                   <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl font-bold ${
-                      mn.active
-                        ? "bg-accent-purple/20 text-accent-purple"
-                        : "bg-white/5 text-text-muted"
+                    key={mn}
+                    className={`flex items-center gap-4 rounded-xl border p-4 ${
+                      active
+                        ? "border-accent-purple/30 bg-accent-purple/10"
+                        : "border-border bg-white/[0.02] opacity-50"
                     }`}
                   >
-                    {mn.number}
-                  </div>
-                  <div>
-                    <p
-                      className={`text-sm font-semibold ${
-                        mn.active ? "text-text-primary" : "text-text-muted"
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl font-bold ${
+                        active
+                          ? "bg-accent-purple/20 text-accent-purple"
+                          : "bg-white/5 text-text-muted"
                       }`}
                     >
-                      {mn.label}
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      {mn.active ? "Present in your chart" : "Not active"}
-                    </p>
+                      {mn}
+                    </div>
+                    <div>
+                      <p
+                        className={`text-sm font-semibold ${
+                          active ? "text-text-primary" : "text-text-muted"
+                        }`}
+                      >
+                        {info.title}
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        {active ? "Present in your chart" : "Not active"}
+                      </p>
+                    </div>
+                    {active && (
+                      <Badge variant="degraded" className="ml-auto">
+                        Active
+                      </Badge>
+                    )}
                   </div>
-                  {mn.active && (
-                    <Badge variant="degraded" className="ml-auto">
-                      Active
-                    </Badge>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
 
           {/* Personal Year */}
-          <Card title="Personal Year 2026" glow="blue">
+          <Card title={`Personal Year ${currentYear}`} glow="blue">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-accent-blue/20 bg-accent-blue/10">
                 <span className="text-4xl font-bold text-accent-blue">
-                  {MOCK_NUMBERS.personalYear.number}
+                  {numbers.personalYear}
                 </span>
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-semibold text-text-primary mb-1">
-                  {MOCK_NUMBERS.personalYear.title}
+                  {personalYearInfo.title}
                 </h3>
                 <p className="text-sm leading-relaxed text-text-secondary">
-                  {MOCK_NUMBERS.personalYear.meaning}
+                  {personalYearInfo.meaning}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {MOCK_NUMBERS.personalYear.keywords.map((kw) => (
+                  {personalYearInfo.keywords.map((kw) => (
                     <Badge key={kw} variant="info">
                       {kw}
                     </Badge>

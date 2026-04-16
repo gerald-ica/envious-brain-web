@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,10 @@ import { CitySearch } from "@/components/ui/city-search";
 // ---------------------------------------------------------------------------
 // Human Design
 // ---------------------------------------------------------------------------
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
 // ---- Mock data ------------------------------------------------------------
 
@@ -72,31 +78,114 @@ const MOCK_CHANNELS = [
 // ---- Page -----------------------------------------------------------------
 
 export default function HumanDesignPage() {
-  const [birthDate, setBirthDate] = useState("1990-06-15");
-  const [birthTime, setBirthTime] = useState("14:30");
-  const [city, setCity] = useState("New York, USA");
-  const [latitude, setLatitude] = useState("40.7128");
-  const [longitude, setLongitude] = useState("-74.0060");
-  const [calculated, setCalculated] = useState(true);
+  const { activeProfile } = useProfile();
+
+  const [birthDate, setBirthDate] = useState(activeProfile?.birthDate ?? "");
+  const [birthTime, setBirthTime] = useState(activeProfile?.birthTime ?? "");
+  const [city, setCity] = useState(activeProfile?.city ?? "");
+  const [latitude, setLatitude] = useState(
+    activeProfile ? String(activeProfile.lat) : "",
+  );
+  const [longitude, setLongitude] = useState(
+    activeProfile ? String(activeProfile.lon) : "",
+  );
+  const [timezone, setTimezone] = useState(activeProfile?.timezone ?? "UTC");
+
+  const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
+
+  const fetchChart = async (
+    date: string,
+    time: string,
+    lat: number,
+    lon: number,
+    tz: string,
+  ) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/charts/human-design`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datetime: `${date}T${time}:00`,
+          latitude: lat,
+          longitude: lon,
+          timezone: tz,
+        }),
+      });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      setUsedFallback(false);
+      setCalculated(true);
+    } catch (err) {
+      console.warn("Human Design API unavailable, using sample data:", err);
+      setUsedFallback(true);
+      setCalculated(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeProfile) return;
+    setBirthDate(activeProfile.birthDate);
+    setBirthTime(activeProfile.birthTime);
+    setCity(activeProfile.city);
+    setLatitude(String(activeProfile.lat));
+    setLongitude(String(activeProfile.lon));
+    setTimezone(activeProfile.timezone);
+    fetchChart(
+      activeProfile.birthDate,
+      activeProfile.birthTime,
+      activeProfile.lat,
+      activeProfile.lon,
+      activeProfile.timezone,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile]);
 
   const handleCalculate = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setCalculated(true);
-      setLoading(false);
-    }, 800);
+    fetchChart(
+      birthDate,
+      birthTime,
+      Number(latitude),
+      Number(longitude),
+      timezone,
+    );
   };
+
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view your Human Design chart.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Human Design</h1>
+        <h1 className="text-2xl font-bold text-text-primary">
+          Human Design for {activeProfile.name}
+        </h1>
         <p className="mt-1 text-sm text-text-muted">
           Your energetic blueprint for living in alignment
         </p>
       </div>
+
+      {usedFallback && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
+          Sample data shown -- API unavailable
+        </div>
+      )}
 
       {/* Birth Data Form */}
       <Card title="Birth Data" className="mb-6">
@@ -125,7 +214,7 @@ export default function HumanDesignPage() {
           />
           <div className="flex items-end">
             <Button onClick={handleCalculate} disabled={loading} className="w-full">
-              {loading ? "Calculating..." : "Generate Chart"}
+              {loading ? "Calculating..." : "Regenerate Chart"}
             </Button>
           </div>
         </div>
@@ -208,7 +297,6 @@ export default function HumanDesignPage() {
                       : "border-border bg-white/[0.02]"
                   }`}
                 >
-                  {/* Status indicator */}
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                       center.defined
@@ -251,7 +339,6 @@ export default function HumanDesignPage() {
 
           {/* Gates + Channels */}
           <div className="grid gap-4 lg:grid-cols-2">
-            {/* Active Gates */}
             <Card title="Active Gates">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -290,7 +377,6 @@ export default function HumanDesignPage() {
               </div>
             </Card>
 
-            {/* Active Channels */}
             <Card title="Active Channels">
               <div className="space-y-3">
                 {MOCK_CHANNELS.map((ch) => (

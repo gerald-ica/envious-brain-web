@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-// ---- Biorhythm calculation ----
+// ---- Biorhythm calculation helpers ----
 
-const BIRTH_DATE = new Date(1990, 6, 15); // July 15, 1990
-const TODAY = new Date(2026, 3, 16); // April 16, 2026
-
-function daysSinceBirth(date: Date): number {
-  const diff = date.getTime() - BIRTH_DATE.getTime();
+function daysSinceBirth(date: Date, birthDate: Date): number {
+  const diff = date.getTime() - birthDate.getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
@@ -25,12 +25,12 @@ const CYCLES = [
   { name: "Intuitive", period: 38, color: "accent-amber", hex: "#f59e0b" },
 ];
 
-function generateData(centerDate: Date, rangeDays: number) {
+function generateData(centerDate: Date, rangeDays: number, birthDate: Date) {
   const data: { day: number; date: Date; values: Record<string, number> }[] = [];
   for (let i = -rangeDays; i <= rangeDays; i++) {
     const date = new Date(centerDate);
     date.setDate(date.getDate() + i);
-    const days = daysSinceBirth(date);
+    const days = daysSinceBirth(date, birthDate);
     const values: Record<string, number> = {};
     CYCLES.forEach((c) => {
       values[c.name] = biorhythmValue(days, c.period);
@@ -48,33 +48,80 @@ function isCriticalDay(days: number, period: number): boolean {
 // ---- Page ----
 
 export default function BiorhythmPage() {
+  const { activeProfile } = useProfile();
   const [selectedCycle, setSelectedCycle] = useState<string | null>(null);
 
-  const todayDays = daysSinceBirth(TODAY);
-  const chartData = generateData(TODAY, 15);
+  // Parse birth date from active profile. If absent, render empty state.
+  const birthDate = useMemo(() => {
+    if (!activeProfile?.birthDate) return null;
+    // Use local-noon to avoid TZ shift with "YYYY-MM-DD"
+    const [y, m, d] = activeProfile.birthDate.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }, [activeProfile]);
 
-  const currentValues = CYCLES.map((c) => ({
-    ...c,
-    value: biorhythmValue(todayDays, c.period),
-    isCritical: isCriticalDay(todayDays, c.period),
-  }));
+  const today = useMemo(() => new Date(), []);
 
-  // Find critical days in the next 7 days
-  const criticalWarnings: { cycle: string; daysAway: number; date: Date }[] = [];
-  for (let i = 0; i <= 7; i++) {
-    const futureDate = new Date(TODAY);
-    futureDate.setDate(futureDate.getDate() + i);
-    const futureDays = daysSinceBirth(futureDate);
-    CYCLES.forEach((c) => {
-      if (isCriticalDay(futureDays, c.period)) {
-        criticalWarnings.push({
-          cycle: c.name,
-          daysAway: i,
-          date: futureDate,
-        });
-      }
-    });
+  // Derived data -- reactive to activeProfile via birthDate dep
+  const derived = useMemo(() => {
+    if (!birthDate) return null;
+
+    const todayDays = daysSinceBirth(today, birthDate);
+    const chartData = generateData(today, 15, birthDate);
+
+    const currentValues = CYCLES.map((c) => ({
+      ...c,
+      value: biorhythmValue(todayDays, c.period),
+      isCritical: isCriticalDay(todayDays, c.period),
+    }));
+
+    // Find critical days in the next 7 days
+    const criticalWarnings: { cycle: string; daysAway: number; date: Date }[] =
+      [];
+    for (let i = 0; i <= 7; i++) {
+      const futureDate = new Date(today);
+      futureDate.setDate(futureDate.getDate() + i);
+      const futureDays = daysSinceBirth(futureDate, birthDate);
+      CYCLES.forEach((c) => {
+        if (isCriticalDay(futureDays, c.period)) {
+          criticalWarnings.push({
+            cycle: c.name,
+            daysAway: i,
+            date: futureDate,
+          });
+        }
+      });
+    }
+
+    return { todayDays, chartData, currentValues, criticalWarnings };
+  }, [birthDate, today]);
+
+  if (!activeProfile || !birthDate || !derived) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-text-primary">Biorhythm</h1>
+          <p className="text-sm text-text-muted">
+            Physical, emotional, intellectual, and intuitive cycles since birth.
+          </p>
+        </div>
+        <Card title="Create a profile to see your biorhythm" glow="blue">
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed text-text-secondary">
+              Biorhythm cycles are measured from your birth date. Add a profile
+              with a valid birth date to see your Physical (23d), Emotional
+              (28d), Intellectual (33d), and Intuitive (38d) cycles.
+            </p>
+            <Link href="/dashboard/settings">
+              <Button>Add your first profile</Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
   }
+
+  const { todayDays, chartData, currentValues, criticalWarnings } = derived;
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -86,7 +133,8 @@ export default function BiorhythmPage() {
         </div>
         <p className="text-sm text-text-muted">
           Physical (23d), Emotional (28d), Intellectual (33d), and Intuitive
-          (38d) cycles since birth.
+          (38d) cycles since {activeProfile.name}&apos;s birth on{" "}
+          {activeProfile.birthDate}.
         </p>
       </div>
 

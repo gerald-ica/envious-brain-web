@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 import React from "react";
@@ -45,32 +46,94 @@ export const DEFAULT_PROFILE: Profile = {
   timezone: "America/New_York",
 };
 
+// ---- localStorage keys ---------------------------------------------------
+
+const STORAGE_KEY_PROFILES = "envious_profiles";
+const STORAGE_KEY_ACTIVE_ID = "envious_active_profile_id";
+
 // ---- Context --------------------------------------------------------------
 
 const ProfileContext = createContext<ProfileState | null>(null);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  // Hydrate from localStorage on first render (SSR-safe)
+  const [profiles, setProfiles] = useState<Profile[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_PROFILES);
+      return raw ? (JSON.parse(raw) as Profile[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [activeProfile, setActiveProfile] = useState<Profile | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_PROFILES);
+      const id = localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
+      if (!raw) return null;
+      const list = JSON.parse(raw) as Profile[];
+      if (!list.length) return null;
+      if (!id) return list[0] ?? null;
+      return list.find((p) => p.id === id) ?? list[0] ?? null;
+    } catch {
+      return null;
+    }
+  });
+
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
-  const setProfile = useCallback(
-    (profile: Profile) => {
-      setActiveProfile(profile);
-    },
-    [],
-  );
+  // Persist profiles whenever they change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(profiles));
+    } catch {
+      /* storage quota or disabled -- best effort */
+    }
+  }, [profiles]);
+
+  // Persist active profile id whenever it changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (activeProfile) {
+        localStorage.setItem(STORAGE_KEY_ACTIVE_ID, activeProfile.id);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_ACTIVE_ID);
+      }
+    } catch {
+      /* best effort */
+    }
+  }, [activeProfile]);
+
+  const setProfile = useCallback((profile: Profile) => {
+    setActiveProfile(profile);
+  }, []);
 
   const addProfile = useCallback((profile: Profile) => {
-    setProfiles((prev) => [...prev, profile]);
+    setProfiles((prev) => {
+      // Replace if same id already exists, otherwise append
+      const exists = prev.some((p) => p.id === profile.id);
+      return exists
+        ? prev.map((p) => (p.id === profile.id ? profile : p))
+        : [...prev, profile];
+    });
+    // Auto-activate first profile so users don't have to click after creating
+    setActiveProfile((curr) => curr ?? profile);
   }, []);
 
   const removeProfile = useCallback(
     (id: string) => {
-      setProfiles((prev) => prev.filter((p) => p.id !== id));
-      if (activeProfile?.id === id) {
-        setActiveProfile(null);
-      }
+      setProfiles((prev) => {
+        const next = prev.filter((p) => p.id !== id);
+        // If we removed the active one, pick another or clear
+        if (activeProfile?.id === id) {
+          setActiveProfile(next[0] ?? null);
+        }
+        return next;
+      });
     },
     [activeProfile],
   );

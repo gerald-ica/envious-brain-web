@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 // ---- Mock Data ----
 
@@ -258,13 +261,30 @@ function ArchetypeCard({
 // ---- Page ----
 
 export default function ArchetypesPage() {
+  const { activeProfile } = useProfile();
+
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <Card title="No Profile Selected">
+          <p className="text-text-secondary mb-4">
+            Create a birth profile to view your Jungian archetypes.
+          </p>
+          <Link href="/dashboard/settings">
+            <Button>Go to Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-2xl font-bold text-text-primary">
-            Jungian Archetypes
+            Archetypes for {activeProfile.name}
           </h1>
           <Badge variant="info">Alchemist</Badge>
         </div>

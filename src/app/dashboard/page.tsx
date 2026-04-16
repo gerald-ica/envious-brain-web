@@ -121,14 +121,16 @@ export default function DashboardPage() {
         <Card title="Profile" glow="blue">
           <div className="space-y-2">
             <p className="text-lg font-semibold text-text-primary">
-              {activeProfile?.name ?? "No profile"}
+              {activeProfile.name}
             </p>
             <p className="text-sm text-text-secondary">
-              {activeProfile?.birthDate ?? "--"} at{" "}
-              {activeProfile?.birthTime ?? "--"}
+              {activeProfile.birthDate} at {activeProfile.birthTime}
             </p>
             <p className="text-xs text-text-muted">
-              {activeProfile?.timezone ?? "--"}
+              {activeProfile.city}
+            </p>
+            <p className="text-xs text-text-muted">
+              {activeProfile.timezone}
             </p>
             <div className="pt-2 flex flex-wrap gap-1.5">
               <Badge variant="info">{PLACEHOLDER.mbtiType}</Badge>
