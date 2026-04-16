@@ -17,9 +17,37 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
+// ---- Types ----------------------------------------------------------------
+
+interface SynastryAspect {
+  personA: string;
+  aspect: string;
+  personB: string;
+  orb: string;
+  nature: string;
+  significance: string;
+}
+
+interface SynastryResponse {
+  compatibility_score?: number;
+  overall_theme?: string;
+  strengths?: string[];
+  challenges?: string[];
+  aspects?: Array<{
+    person1_planet?: string;
+    person2_planet?: string;
+    aspect?: string;
+    orb?: number | string;
+    nature?: string;
+    significance?: string;
+  }>;
+}
+
+type ApiStatus = "loading" | "live" | "fallback";
+
 // ---- Mock data ------------------------------------------------------------
 
-const MOCK_CROSS_ASPECTS = [
+const MOCK_CROSS_ASPECTS: SynastryAspect[] = [
   { personA: "Sun", aspect: "Conjunct", personB: "Venus", orb: "1\u00b012'", nature: "Harmonious", significance: "Very Strong" },
   { personA: "Moon", aspect: "Trine", personB: "Moon", orb: "2\u00b044'", nature: "Harmonious", significance: "Strong" },
   { personA: "Venus", aspect: "Sextile", personB: "Mars", orb: "0\u00b055'", nature: "Harmonious", significance: "Very Strong" },
@@ -33,6 +61,43 @@ const MOCK_CROSS_ASPECTS = [
 ];
 
 const MOCK_COMPATIBILITY_SCORE = 78;
+
+// ---- Status indicator -----------------------------------------------------
+
+function StatusIndicator({ status }: { status: ApiStatus }) {
+  if (status === "loading") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+        <span className="inline-block animate-spin">⟳</span>
+        <span>Computing...</span>
+      </span>
+    );
+  }
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-accent-emerald/80">
+        <span>✓</span>
+        <span>Live data</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+      <span>◦</span>
+      <span>Sample view</span>
+    </span>
+  );
+}
+
+// ---- Helpers --------------------------------------------------------------
+
+function formatOrb(orb: number | string | undefined): string {
+  if (orb == null) return "";
+  if (typeof orb === "string") return orb;
+  const deg = Math.floor(Math.abs(orb));
+  const min = Math.round((Math.abs(orb) - deg) * 60);
+  return `${deg}\u00b0${String(min).padStart(2, "0")}'`;
+}
 
 const MOCK_ELEMENT_HARMONY = [
   { element: "Fire", personA: 3, personB: 2, harmony: "Good" },
@@ -126,7 +191,8 @@ export default function SynastryPage() {
 
   const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [usedFallback, setUsedFallback] = useState(false);
+  const [status, setStatus] = useState<ApiStatus>("loading");
+  const [data, setData] = useState<SynastryResponse | null>(null);
 
   // Selected Person B profile (when in profile mode)
   const personBProfile = personBId
@@ -136,39 +202,47 @@ export default function SynastryPage() {
   const fetchSynastry = async () => {
     if (!activeProfile) return;
     setLoading(true);
+    setStatus("loading");
     try {
-      const personA = {
-        datetime: `${activeProfile.birthDate}T${activeProfile.birthTime}:00`,
-        latitude: activeProfile.lat,
-        longitude: activeProfile.lon,
-        timezone: activeProfile.timezone,
-      };
-      const personB =
-        personBMode === "profile" && personBProfile
-          ? {
-              datetime: `${personBProfile.birthDate}T${personBProfile.birthTime}:00`,
-              latitude: personBProfile.lat,
-              longitude: personBProfile.lon,
-              timezone: personBProfile.timezone,
-            }
-          : {
-              datetime: `${dateB}T${timeB}:00`,
-              latitude: Number(latB),
-              longitude: Number(lonB),
-              timezone: "UTC",
-            };
+      const person1Time = activeProfile.birthTime || "12:00";
+      const person1Datetime = `${activeProfile.birthDate}T${person1Time}:00`;
 
-      const res = await fetch(`${API_URL}/api/v1/charts/synastry`, {
+      let person2Datetime: string;
+      let person2Lat: number;
+      let person2Lon: number;
+      if (personBMode === "profile" && personBProfile) {
+        const t = personBProfile.birthTime || "12:00";
+        person2Datetime = `${personBProfile.birthDate}T${t}:00`;
+        person2Lat = personBProfile.lat;
+        person2Lon = personBProfile.lon;
+      } else {
+        const t = timeB || "12:00";
+        person2Datetime = `${dateB}T${t}:00`;
+        person2Lat = Number(latB);
+        person2Lon = Number(lonB);
+      }
+
+      const res = await fetch(`${API_URL}/api/v1/western/synastry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ person_a: personA, person_b: personB }),
+        body: JSON.stringify({
+          person1_datetime: person1Datetime,
+          person1_latitude: activeProfile.lat,
+          person1_longitude: activeProfile.lon,
+          person2_datetime: person2Datetime,
+          person2_latitude: person2Lat,
+          person2_longitude: person2Lon,
+        }),
       });
       if (!res.ok) throw new Error(`API returned ${res.status}`);
-      setUsedFallback(false);
+      const json = (await res.json()) as SynastryResponse;
+      setData(json);
+      setStatus("live");
       setCalculated(true);
     } catch (err) {
       console.warn("Synastry API unavailable, using sample data:", err);
-      setUsedFallback(true);
+      setData(null);
+      setStatus("fallback");
       setCalculated(true);
     } finally {
       setLoading(false);
@@ -199,20 +273,19 @@ export default function SynastryPage() {
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">
-          Synastry for {activeProfile.name}
-        </h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Relationship compatibility through cross-chart aspect analysis
-        </p>
-      </div>
-
-      {usedFallback && (
-        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
-          Sample data shown -- API unavailable
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">
+            Synastry for {activeProfile.name}
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Relationship compatibility through cross-chart aspect analysis
+          </p>
         </div>
-      )}
+        <div className="pt-2">
+          <StatusIndicator status={status} />
+        </div>
+      </div>
 
       {/* Two Birth Data panels side by side */}
       <div className="grid gap-4 lg:grid-cols-2 mb-6">
@@ -338,17 +411,41 @@ export default function SynastryPage() {
         </Button>
       </div>
 
-      {calculated && (
+      {calculated && (() => {
+        const displayScore = Math.round(data?.compatibility_score ?? MOCK_COMPATIBILITY_SCORE);
+        const displayAspects: SynastryAspect[] = data?.aspects?.length
+          ? data.aspects.map((a) => ({
+              personA: a.person1_planet ?? "-",
+              aspect: a.aspect ?? "-",
+              personB: a.person2_planet ?? "-",
+              orb: formatOrb(a.orb),
+              nature: a.nature ?? "Harmonious",
+              significance: a.significance ?? "Moderate",
+            }))
+          : MOCK_CROSS_ASPECTS;
+        const matchLabel =
+          displayScore >= 75 ? "Strong Match" : displayScore >= 50 ? "Moderate Match" : "Challenging Match";
+        return (
         <div className="animate-fade-in space-y-6">
+          {data?.overall_theme && (
+            <Card title="Overall Theme">
+              <p className="text-sm leading-relaxed text-text-secondary">
+                {data.overall_theme}
+              </p>
+            </Card>
+          )}
+
           {/* Compatibility Score + Summary */}
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="flex flex-col items-center justify-center" glow="blue">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Compatibility Score
               </p>
-              <CompatibilityGauge score={MOCK_COMPATIBILITY_SCORE} />
+              <CompatibilityGauge score={displayScore} />
               <div className="mt-4 flex gap-2">
-                <Badge variant="healthy">Strong Match</Badge>
+                <Badge variant={displayScore >= 75 ? "healthy" : displayScore >= 50 ? "info" : "degraded"}>
+                  {matchLabel}
+                </Badge>
               </div>
               <p className="mt-2 text-xs text-text-muted text-center">
                 Based on cross-aspect analysis, element balance, and planetary harmony
@@ -405,7 +502,7 @@ export default function SynastryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_CROSS_ASPECTS.map((a, i) => (
+                  {displayAspects.map((a, i) => (
                     <tr
                       key={i}
                       className="border-b border-border/50 last:border-0"
@@ -449,6 +546,36 @@ export default function SynastryPage() {
               </table>
             </div>
           </Card>
+
+          {/* Strengths & Challenges (live data only) */}
+          {(data?.strengths?.length || data?.challenges?.length) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {data?.strengths && data.strengths.length > 0 && (
+                <Card title="Strengths" glow="blue">
+                  <ul className="space-y-2">
+                    {data.strengths.map((s, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-text-secondary">
+                        <span className="text-accent-emerald">+</span>
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+              {data?.challenges && data.challenges.length > 0 && (
+                <Card title="Challenges" glow="purple">
+                  <ul className="space-y-2">
+                    {data.challenges.map((c, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-text-secondary">
+                        <span className="text-accent-amber">!</span>
+                        <span>{c}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+            </div>
+          )}
 
           {/* Element Harmony */}
           <Card title="Element Harmony Analysis">
@@ -505,7 +632,8 @@ export default function SynastryPage() {
             </div>
           </Card>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

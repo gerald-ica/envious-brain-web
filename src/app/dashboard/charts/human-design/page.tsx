@@ -17,6 +17,71 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
+// ---- Types ----------------------------------------------------------------
+
+interface HDGate {
+  gate?: number;
+  name?: string;
+  center?: string;
+  line?: number;
+}
+
+interface HDChannel {
+  channel?: string;
+  name?: string;
+  from?: string;
+  to?: string;
+  type?: string;
+}
+
+interface HDCenter {
+  name?: string;
+  defined?: boolean;
+}
+
+interface HDResponse {
+  type?: string;
+  strategy?: string;
+  authority?: string;
+  profile?: string;
+  profile_name?: string;
+  definition?: string;
+  incarnation_cross?: string;
+  not_self_theme?: string;
+  signature?: string;
+  gates?: HDGate[];
+  channels?: HDChannel[];
+  centers?: HDCenter[] | Record<string, boolean>;
+  [k: string]: unknown;
+}
+
+type ApiStatus = "loading" | "live" | "fallback";
+
+function StatusIndicator({ status }: { status: ApiStatus }) {
+  if (status === "loading") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+        <span className="inline-block animate-spin">⟳</span>
+        <span>Computing...</span>
+      </span>
+    );
+  }
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-accent-emerald/80">
+        <span>✓</span>
+        <span>Live data</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+      <span>◦</span>
+      <span>Sample view</span>
+    </span>
+  );
+}
+
 // ---- Mock data ------------------------------------------------------------
 
 const MOCK_OVERVIEW = {
@@ -93,7 +158,8 @@ export default function HumanDesignPage() {
 
   const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [usedFallback, setUsedFallback] = useState(false);
+  const [status, setStatus] = useState<ApiStatus>("loading");
+  const [data, setData] = useState<HDResponse | null>(null);
 
   const fetchChart = async (
     date: string,
@@ -103,23 +169,28 @@ export default function HumanDesignPage() {
     tz: string,
   ) => {
     setLoading(true);
+    setStatus("loading");
     try {
-      const res = await fetch(`${API_URL}/api/v1/charts/human-design`, {
+      const t = time || "12:00";
+      const res = await fetch(`${API_URL}/api/v1/human-design/chart`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          datetime: `${date}T${time}:00`,
+          datetime: `${date}T${t}:00`,
           latitude: lat,
           longitude: lon,
           timezone: tz,
         }),
       });
       if (!res.ok) throw new Error(`API returned ${res.status}`);
-      setUsedFallback(false);
+      const json = (await res.json()) as HDResponse;
+      setData(json);
+      setStatus("live");
       setCalculated(true);
     } catch (err) {
       console.warn("Human Design API unavailable, using sample data:", err);
-      setUsedFallback(true);
+      setData(null);
+      setStatus("fallback");
       setCalculated(true);
     } finally {
       setLoading(false);
@@ -172,20 +243,19 @@ export default function HumanDesignPage() {
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">
-          Human Design for {activeProfile.name}
-        </h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Your energetic blueprint for living in alignment
-        </p>
-      </div>
-
-      {usedFallback && (
-        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
-          Sample data shown -- API unavailable
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">
+            Human Design for {activeProfile.name}
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Your energetic blueprint for living in alignment
+          </p>
         </div>
-      )}
+        <div className="pt-2">
+          <StatusIndicator status={status} />
+        </div>
+      </div>
 
       {/* Birth Data Form */}
       <Card title="Birth Data" className="mb-6">
@@ -220,7 +290,43 @@ export default function HumanDesignPage() {
         </div>
       </Card>
 
-      {calculated && (
+      {calculated && (() => {
+        const ov = {
+          type: data?.type ?? MOCK_OVERVIEW.type,
+          strategy: data?.strategy ?? MOCK_OVERVIEW.strategy,
+          authority: data?.authority ?? MOCK_OVERVIEW.authority,
+          profile: data?.profile ?? MOCK_OVERVIEW.profile,
+          profileName: data?.profile_name ?? MOCK_OVERVIEW.profileName,
+          definition: data?.definition ?? MOCK_OVERVIEW.definition,
+          incarnationCross: data?.incarnation_cross ?? MOCK_OVERVIEW.incarnationCross,
+          notSelfTheme: data?.not_self_theme ?? MOCK_OVERVIEW.notSelfTheme,
+          signature: data?.signature ?? MOCK_OVERVIEW.signature,
+        };
+
+        // Merge real center data if present
+        const centersFromApi = (() => {
+          if (!data?.centers) return null;
+          if (Array.isArray(data.centers)) {
+            return MOCK_CENTERS.map((c) => {
+              const match = (data.centers as HDCenter[]).find(
+                (x) => (x.name ?? "").toLowerCase() === c.name.toLowerCase(),
+              );
+              return match ? { ...c, defined: Boolean(match.defined) } : c;
+            });
+          }
+          // Record<string, boolean>
+          const rec = data.centers as Record<string, boolean>;
+          return MOCK_CENTERS.map((c) => ({
+            ...c,
+            defined: rec[c.name] ?? rec[c.name.toLowerCase()] ?? c.defined,
+          }));
+        })();
+        const centers = centersFromApi ?? MOCK_CENTERS;
+
+        const gates: HDGate[] = data?.gates?.length ? data.gates : MOCK_GATES;
+        const channels: HDChannel[] = data?.channels?.length ? data.channels : MOCK_CHANNELS;
+
+        return (
         <div className="animate-fade-in space-y-6">
           {/* Type / Strategy / Authority Overview */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -229,10 +335,10 @@ export default function HumanDesignPage() {
                 Type
               </p>
               <p className="text-lg font-bold text-accent-blue">
-                {MOCK_OVERVIEW.type}
+                {ov.type}
               </p>
               <p className="mt-1 text-xs text-text-muted">
-                Signature: {MOCK_OVERVIEW.signature}
+                Signature: {ov.signature}
               </p>
             </Card>
 
@@ -241,10 +347,10 @@ export default function HumanDesignPage() {
                 Strategy
               </p>
               <p className="text-lg font-bold text-accent-purple">
-                {MOCK_OVERVIEW.strategy}
+                {ov.strategy}
               </p>
               <p className="mt-1 text-xs text-text-muted">
-                Not-Self: {MOCK_OVERVIEW.notSelfTheme}
+                Not-Self: {ov.notSelfTheme}
               </p>
             </Card>
 
@@ -253,10 +359,10 @@ export default function HumanDesignPage() {
                 Authority
               </p>
               <p className="text-lg font-bold text-accent-emerald">
-                {MOCK_OVERVIEW.authority}
+                {ov.authority}
               </p>
               <p className="mt-1 text-xs text-text-muted">
-                {MOCK_OVERVIEW.definition}
+                {ov.definition}
               </p>
             </Card>
 
@@ -265,10 +371,10 @@ export default function HumanDesignPage() {
                 Profile
               </p>
               <p className="text-lg font-bold text-accent-amber">
-                {MOCK_OVERVIEW.profile}
+                {ov.profile}
               </p>
               <p className="mt-1 text-xs text-text-muted">
-                {MOCK_OVERVIEW.profileName}
+                {ov.profileName}
               </p>
             </Card>
           </div>
@@ -276,19 +382,18 @@ export default function HumanDesignPage() {
           {/* Incarnation Cross */}
           <Card title="Incarnation Cross">
             <p className="text-sm font-medium text-text-primary">
-              {MOCK_OVERVIEW.incarnationCross}
+              {ov.incarnationCross}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Your Incarnation Cross represents your life purpose. The Right Angle Cross of Planning
-              speaks to a life dedicated to creating structures and systems that support community
-              well-being. Your energy is designed to bring order and ensure resources are properly managed.
+              Your Incarnation Cross represents your life purpose. It describes the themes
+              and lessons your energy is designed to express in this lifetime.
             </p>
           </Card>
 
           {/* 9 Centers Grid */}
           <Card title="Energy Centers">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {MOCK_CENTERS.map((center) => (
+              {centers.map((center) => (
                 <div
                   key={center.name}
                   className={`flex items-center gap-3 rounded-xl border p-3.5 ${
@@ -351,9 +456,9 @@ export default function HumanDesignPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {MOCK_GATES.map((g) => (
+                    {gates.map((g, i) => (
                       <tr
-                        key={g.gate}
+                        key={g.gate ?? i}
                         className="border-b border-border/50 last:border-0"
                       >
                         <td className="py-2 pr-3">
@@ -379,9 +484,9 @@ export default function HumanDesignPage() {
 
             <Card title="Active Channels">
               <div className="space-y-3">
-                {MOCK_CHANNELS.map((ch) => (
+                {channels.map((ch, i) => (
                   <div
-                    key={ch.channel}
+                    key={ch.channel ?? i}
                     className="flex items-center justify-between rounded-xl border border-border bg-white/[0.02] p-3.5"
                   >
                     <div>
@@ -406,7 +511,8 @@ export default function HumanDesignPage() {
             </Card>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

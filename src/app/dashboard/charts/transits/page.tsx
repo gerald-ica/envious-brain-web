@@ -15,9 +15,121 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
+// ---- Types ----------------------------------------------------------------
+
+interface PlanetPosition {
+  sign?: string;
+  longitude?: number;
+  degree?: number;
+  speed?: number;
+  retrograde?: boolean;
+  [k: string]: unknown;
+}
+
+interface WesternChartResponse {
+  positions?: Record<string, PlanetPosition>;
+  [k: string]: unknown;
+}
+
+interface TransitAspectApi {
+  transit_planet?: string;
+  natal_planet?: string;
+  aspect?: string;
+  orb?: number;
+  nature?: string;
+  significance?: string;
+}
+
+interface TransitsResponse {
+  positions?: Record<string, PlanetPosition>;
+  aspects?: TransitAspectApi[];
+  date?: string;
+  [k: string]: unknown;
+}
+
+type ApiStatus = "loading" | "live" | "fallback";
+
+interface DisplayTransit {
+  planet: string;
+  sign: string;
+  degree: string;
+  speed: string;
+  retrograde: boolean;
+}
+
+interface DisplayAspect {
+  transit: string;
+  aspect: string;
+  natal: string;
+  orb: string;
+  significance: string;
+  nature: string;
+}
+
+// ---- Helpers --------------------------------------------------------------
+
+function formatDeg(value: number | undefined): string {
+  if (value == null || Number.isNaN(value)) return "";
+  const norm = ((value % 30) + 30) % 30;
+  const d = Math.floor(norm);
+  const m = Math.round((norm - d) * 60);
+  return `${d}\u00b0${String(m).padStart(2, "0")}'`;
+}
+
+function formatOrb(value: number | undefined): string {
+  if (value == null || Number.isNaN(value)) return "";
+  const abs = Math.abs(value);
+  const d = Math.floor(abs);
+  const m = Math.round((abs - d) * 60);
+  return `${d}\u00b0${String(m).padStart(2, "0")}'`;
+}
+
+function formatSpeed(value: number | undefined): string {
+  if (value == null || Number.isNaN(value)) return "";
+  const abs = Math.abs(value);
+  const d = Math.floor(abs);
+  const m = Math.round((abs - d) * 60);
+  return `${d}\u00b0${String(m).padStart(2, "0")}'/day`;
+}
+
+function classifySignificance(orb: number | undefined): "high" | "medium" | "low" {
+  if (orb == null) return "medium";
+  const abs = Math.abs(orb);
+  if (abs < 1) return "high";
+  if (abs < 3) return "medium";
+  return "low";
+}
+
+// ---- Status indicator -----------------------------------------------------
+
+function StatusIndicator({ status }: { status: ApiStatus }) {
+  if (status === "loading") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+        <span className="inline-block animate-spin">⟳</span>
+        <span>Computing...</span>
+      </span>
+    );
+  }
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-accent-emerald/80">
+        <span>✓</span>
+        <span>Live data</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+      <span>◦</span>
+      <span>Sample view</span>
+    </span>
+  );
+}
+
 // ---- Fallback data --------------------------------------------------------
 
-const MOCK_TRANSITS = [
+const MOCK_TRANSITS: DisplayTransit[] = [
   { planet: "Sun", sign: "Aries", degree: "26\u00b014'", speed: "0\u00b059'/day", retrograde: false },
   { planet: "Moon", sign: "Leo", degree: "12\u00b008'", speed: "13\u00b022'/day", retrograde: false },
   { planet: "Mercury", sign: "Aries", degree: "15\u00b041'", speed: "1\u00b048'/day", retrograde: false },
@@ -69,30 +181,51 @@ export default function TransitsPage() {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [usedFallback, setUsedFallback] = useState(false);
+  const [status, setStatus] = useState<ApiStatus>("loading");
+  const [transits, setTransits] = useState<TransitsResponse | null>(null);
 
   const fetchTransits = useCallback(async () => {
     if (!activeProfile) return;
     setLoading(true);
+    setStatus("loading");
     try {
-      const today = new Date().toISOString().slice(0, 19);
-      const res = await fetch(`${API_URL}/api/v1/charts/transits`, {
+      // Step 1: fetch natal chart
+      const birthTime = activeProfile.birthTime || "12:00";
+      const natalRes = await fetch(`${API_URL}/api/v1/charts/western`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          datetime: today,
+          datetime: `${activeProfile.birthDate}T${birthTime}:00`,
           latitude: activeProfile.lat,
           longitude: activeProfile.lon,
           timezone: activeProfile.timezone,
         }),
       });
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      setUsedFallback(false);
+      if (!natalRes.ok) throw new Error(`Natal API ${natalRes.status}`);
+      const natal = (await natalRes.json()) as WesternChartResponse;
+
+      // Step 2: fetch current transits against natal positions
+      const today = new Date().toISOString().slice(0, 10);
+      const transitRes = await fetch(`${API_URL}/api/v1/transits/current`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          natal_positions: natal.positions,
+          date: today,
+          orbs: null,
+        }),
+      });
+      if (!transitRes.ok) throw new Error(`Transits API ${transitRes.status}`);
+      const body = (await transitRes.json()) as TransitsResponse;
+
+      setTransits(body);
+      setStatus("live");
       setCalculated(true);
       setLastUpdated(new Date());
     } catch (err) {
       console.warn("Transits API unavailable, using sample data:", err);
-      setUsedFallback(true);
+      setTransits(null);
+      setStatus("fallback");
       setCalculated(true);
       setLastUpdated(new Date());
     } finally {
@@ -147,34 +280,31 @@ export default function TransitsPage() {
             {today} -- current planetary positions and aspects to your natal chart
           </p>
         </div>
-        {calculated && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  autoRefresh ? "bg-accent-emerald pulse-dot" : "bg-text-muted"
-                }`}
-              />
-              <span className="text-xs text-text-muted">
-                {autoRefresh ? "Auto-refresh on" : "Auto-refresh off"}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className="text-xs"
-            >
-              {autoRefresh ? "Pause" : "Resume"}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {usedFallback && (
-        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
-          Sample data shown -- API unavailable
+        <div className="flex items-center gap-3">
+          <StatusIndicator status={status} />
+          {calculated && (
+            <>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    autoRefresh ? "bg-accent-emerald pulse-dot" : "bg-text-muted"
+                  }`}
+                />
+                <span className="text-xs text-text-muted">
+                  {autoRefresh ? "Auto-refresh on" : "Auto-refresh off"}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className="text-xs"
+              >
+                {autoRefresh ? "Pause" : "Resume"}
+              </Button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Natal Reference Card */}
       <Card title="Natal Reference" className="mb-6">
@@ -205,7 +335,30 @@ export default function TransitsPage() {
         </div>
       </Card>
 
-      {calculated && (
+      {calculated && (() => {
+        const livePositions = transits?.positions;
+        const displayTransits: DisplayTransit[] = livePositions
+          ? Object.entries(livePositions).map(([planet, p]) => ({
+              planet,
+              sign: p.sign ?? "-",
+              degree: formatDeg(p.degree ?? p.longitude),
+              speed: formatSpeed(p.speed),
+              retrograde: Boolean(p.retrograde),
+            }))
+          : MOCK_TRANSITS;
+
+        const displayAspects: DisplayAspect[] = transits?.aspects?.length
+          ? transits.aspects.map((a) => ({
+              transit: a.transit_planet ?? "-",
+              aspect: a.aspect ?? "-",
+              natal: a.natal_planet ?? "-",
+              orb: formatOrb(a.orb),
+              significance: a.significance ?? classifySignificance(a.orb),
+              nature: a.nature ?? "Harmonious",
+            }))
+          : MOCK_ASPECTS_TO_NATAL;
+
+        return (
         <div className="animate-fade-in space-y-6">
           <div className="flex items-center gap-2 text-xs text-text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-emerald" />
@@ -225,7 +378,7 @@ export default function TransitsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_TRANSITS.map((t) => (
+                  {displayTransits.map((t) => (
                     <tr
                       key={t.planet}
                       className="border-b border-border/50 last:border-0"
@@ -256,10 +409,10 @@ export default function TransitsPage() {
 
           <Card title="Aspects to Natal Chart">
             <div className="space-y-2">
-              {MOCK_ASPECTS_TO_NATAL.map((a, i) => (
+              {displayAspects.map((a, i) => (
                 <div
                   key={i}
-                  className={`flex items-center justify-between rounded-lg border px-4 py-3 ${SIGNIFICANCE_STYLES[a.significance]}`}
+                  className={`flex items-center justify-between rounded-lg border px-4 py-3 ${SIGNIFICANCE_STYLES[a.significance] ?? SIGNIFICANCE_STYLES.low}`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-text-primary min-w-[80px]">
@@ -278,7 +431,7 @@ export default function TransitsPage() {
                     <span className="font-mono text-xs text-text-muted">
                       {a.orb}
                     </span>
-                    <Badge variant={SIGNIFICANCE_BADGE[a.significance]}>
+                    <Badge variant={SIGNIFICANCE_BADGE[a.significance] ?? "neutral"}>
                       {a.significance}
                     </Badge>
                   </div>
@@ -316,7 +469,7 @@ export default function TransitsPage() {
 
             <Card title="Retrograde Status">
               <div className="space-y-2">
-                {MOCK_TRANSITS.map((t) => (
+                {displayTransits.map((t) => (
                   <div
                     key={t.planet}
                     className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-2.5"
@@ -342,7 +495,8 @@ export default function TransitsPage() {
             </Card>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

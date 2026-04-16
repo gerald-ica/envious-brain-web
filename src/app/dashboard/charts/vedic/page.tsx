@@ -17,6 +17,89 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
+// ---- Types ----------------------------------------------------------------
+
+interface VedicPlanet {
+  sign?: string;
+  longitude?: number;
+  degree?: number;
+  nakshatra?: string;
+  pada?: number;
+  nakshatra_lord?: string;
+  lord?: string;
+  retrograde?: boolean;
+}
+
+interface NakshatraInfo {
+  name?: string;
+  lord?: string;
+  deity?: string;
+  symbol?: string;
+  nature?: string;
+  gana?: string;
+  dosha?: string;
+  description?: string;
+}
+
+interface DashaSubPeriod {
+  planet?: string;
+  start?: string;
+  end?: string;
+  active?: boolean;
+}
+
+interface DashaInfo {
+  current?: string;
+  start_date?: string;
+  end_date?: string;
+  sub_periods?: DashaSubPeriod[];
+}
+
+interface VedicResponse {
+  positions?: Record<string, VedicPlanet>;
+  nakshatra?: NakshatraInfo;
+  dashas?: DashaInfo;
+  ayanamsa?: string | number;
+  [k: string]: unknown;
+}
+
+type ApiStatus = "loading" | "live" | "fallback";
+
+// ---- Helpers --------------------------------------------------------------
+
+function formatDegV(value: number | undefined): string {
+  if (value == null || Number.isNaN(value)) return "";
+  const norm = ((value % 30) + 30) % 30;
+  const d = Math.floor(norm);
+  const m = Math.round((norm - d) * 60);
+  return `${d}\u00b0${String(m).padStart(2, "0")}'`;
+}
+
+function StatusIndicator({ status }: { status: ApiStatus }) {
+  if (status === "loading") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+        <span className="inline-block animate-spin">⟳</span>
+        <span>Computing...</span>
+      </span>
+    );
+  }
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-accent-emerald/80">
+        <span>✓</span>
+        <span>Live data</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+      <span>◦</span>
+      <span>Sample view</span>
+    </span>
+  );
+}
+
 // ---- Fallback data --------------------------------------------------------
 
 const MOCK_RASHI = [
@@ -111,7 +194,8 @@ export default function VedicPage() {
 
   const [calculated, setCalculated] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [usedFallback, setUsedFallback] = useState(false);
+  const [status, setStatus] = useState<ApiStatus>("loading");
+  const [data, setData] = useState<VedicResponse | null>(null);
 
   const fetchChart = async (
     date: string,
@@ -121,24 +205,29 @@ export default function VedicPage() {
     tz: string,
   ) => {
     setLoading(true);
+    setStatus("loading");
     try {
-      const res = await fetch(`${API_URL}/api/v1/charts/vedic`, {
+      const t = time || "12:00";
+      const res = await fetch(`${API_URL}/api/v1/vedic/chart`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          datetime: `${date}T${time}:00`,
+          datetime: `${date}T${t}:00`,
           latitude: lat,
           longitude: lon,
           timezone: tz,
+          ayanamsa: "lahiri",
         }),
       });
       if (!res.ok) throw new Error(`API returned ${res.status}`);
-      // Real data would replace mocks here; for now simply flag success
-      setUsedFallback(false);
+      const json = (await res.json()) as VedicResponse;
+      setData(json);
+      setStatus("live");
       setCalculated(true);
     } catch (err) {
       console.warn("Vedic API unavailable, using sample data:", err);
-      setUsedFallback(true);
+      setData(null);
+      setStatus("fallback");
       setCalculated(true);
     } finally {
       setLoading(false);
@@ -191,20 +280,19 @@ export default function VedicPage() {
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">
-          Vedic Chart for {activeProfile.name}
-        </h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Jyotish -- sidereal zodiac with Lahiri ayanamsha
-        </p>
-      </div>
-
-      {usedFallback && (
-        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-2.5 text-sm text-accent-amber">
-          Sample data shown -- API unavailable
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">
+            Vedic Chart for {activeProfile.name}
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Jyotish -- sidereal zodiac with Lahiri ayanamsha
+          </p>
         </div>
-      )}
+        <div className="pt-2">
+          <StatusIndicator status={status} />
+        </div>
+      </div>
 
       {/* Birth Data */}
       <Card title="Birth Data" className="mb-6">
@@ -239,7 +327,22 @@ export default function VedicPage() {
         </div>
       </Card>
 
-      {calculated && (
+      {calculated && (() => {
+        const livePositions = data?.positions;
+        const rashi = livePositions
+          ? Object.entries(livePositions).map(([planet, p]) => ({
+              planet: p.retrograde ? `${planet} (R)` : planet,
+              sign: p.sign ?? "-",
+              degree: formatDegV(p.degree ?? p.longitude),
+              nakshatra: p.nakshatra ?? "-",
+              pada: p.pada ?? "-",
+              lord: p.nakshatra_lord ?? p.lord ?? "-",
+            }))
+          : MOCK_RASHI;
+        const nak = data?.nakshatra ?? null;
+        const dasha = data?.dashas ?? null;
+
+        return (
         <div className="animate-fade-in space-y-6">
           {/* Rashi Positions */}
           <Card title="Rashi Positions (Sidereal)">
@@ -256,7 +359,7 @@ export default function VedicPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_RASHI.map((p) => (
+                  {rashi.map((p) => (
                     <tr
                       key={p.planet}
                       className="border-b border-border/50 last:border-0"
@@ -284,7 +387,7 @@ export default function VedicPage() {
               <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border border-accent-purple/20 bg-accent-purple/10">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-accent-purple">
-                    {MOCK_NAKSHATRA.moon}
+                    {nak?.name ?? MOCK_NAKSHATRA.moon}
                   </p>
                 </div>
               </div>
@@ -293,28 +396,28 @@ export default function VedicPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-text-muted">Lord:</span>
                     <span className="text-sm font-medium text-text-primary">
-                      {MOCK_NAKSHATRA.lord}
+                      {nak?.lord ?? MOCK_NAKSHATRA.lord}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-text-muted">Deity:</span>
                     <span className="text-sm font-medium text-text-primary">
-                      {MOCK_NAKSHATRA.deity}
+                      {nak?.deity ?? MOCK_NAKSHATRA.deity}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-text-muted">Symbol:</span>
                     <span className="text-sm text-text-secondary">
-                      {MOCK_NAKSHATRA.symbol}
+                      {nak?.symbol ?? MOCK_NAKSHATRA.symbol}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-text-muted">Nature:</span>
-                    <Badge variant="healthy">{MOCK_NAKSHATRA.nature}</Badge>
+                    <Badge variant="healthy">{nak?.nature ?? MOCK_NAKSHATRA.nature}</Badge>
                   </div>
                 </div>
                 <p className="text-sm leading-relaxed text-text-secondary">
-                  {MOCK_NAKSHATRA.description}
+                  {nak?.description ?? MOCK_NAKSHATRA.description}
                 </p>
               </div>
             </div>
@@ -326,12 +429,12 @@ export default function VedicPage() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-text-primary">
-                    {MOCK_DASHA.current}
+                    {dasha?.current ?? MOCK_DASHA.current}
                   </span>
                   <Badge variant="info">Active</Badge>
                 </div>
                 <span className="text-xs text-text-muted">
-                  {MOCK_DASHA.startDate} to {MOCK_DASHA.endDate}
+                  {(dasha?.start_date ?? MOCK_DASHA.startDate)} to {(dasha?.end_date ?? MOCK_DASHA.endDate)}
                 </span>
               </div>
               <div className="h-2 rounded-full bg-white/5 overflow-hidden">
@@ -340,16 +443,15 @@ export default function VedicPage() {
                   style={{ width: "28%" }}
                 />
               </div>
-              <p className="mt-1 text-xs text-text-muted">28% elapsed</p>
             </div>
 
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
               Antardasha (Sub-periods)
             </p>
             <div className="space-y-2">
-              {MOCK_DASHA.subPeriods.map((sp) => (
+              {(dasha?.sub_periods?.length ? dasha.sub_periods : MOCK_DASHA.subPeriods).map((sp, i) => (
                 <div
-                  key={sp.planet}
+                  key={sp.planet ?? i}
                   className={`flex items-center justify-between rounded-lg px-4 py-2.5 ${
                     sp.active
                       ? "bg-accent-blue/10 border border-accent-blue/30"
@@ -409,7 +511,8 @@ export default function VedicPage() {
             </div>
           </Card>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
