@@ -14,7 +14,7 @@ function HealthDot() {
     async function check() {
       try {
         const res = await fetch(
-          "https://envious-brain-api-uxgej3n6ta-uc.a.run.app/health",
+          "https://envious-brain-api-uxgej3n6ta-uc.a.run.app/api/v1/health",
           { cache: "no-store" },
         );
         if (!cancelled) setHealthy(res.ok);
