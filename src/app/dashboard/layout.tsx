@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProfileProvider } from "@/lib/store";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -12,6 +12,7 @@ import { TopBar } from "@/components/layout/topbar";
 function AuthenticatedDashboard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -46,11 +47,11 @@ function AuthenticatedDashboard({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-navy">
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar />
+        <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
         <main className="flex-1 overflow-y-auto p-6 cosmic-bg">{children}</main>
       </div>
     </div>

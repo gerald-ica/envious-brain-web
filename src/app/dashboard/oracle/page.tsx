@@ -14,6 +14,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  error?: boolean;
 }
 
 interface ChatSession {
@@ -30,16 +31,17 @@ type Provider = "openai" | "anthropic" | "openrouter";
 // Constants
 // ---------------------------------------------------------------------------
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
 const DEFAULT_WELCOME =
   "I am the Oracle, a 27-expert ensemble intelligence. Ask me about your charts, personality, transits, or any aspect of your cosmic blueprint.";
 
 function buildWelcomeMessage(name?: string | null): string {
   if (!name) return DEFAULT_WELCOME;
-  return `Welcome, ${name}. I am the Oracle, a 27-expert ensemble intelligence. Ask me about your charts, personality, transits, or any aspect of your cosmic blueprint.`;
+  return `Welcome, ${name}. ${DEFAULT_WELCOME}`;
 }
-
-// Backwards-compatible constant (used by sample sessions without access to profile)
-const WELCOME_MESSAGE = DEFAULT_WELCOME;
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   openai: "OpenAI",
@@ -54,163 +56,16 @@ const PROVIDER_MODELS: Record<Provider, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Mock Oracle responses
+// API helpers
 // ---------------------------------------------------------------------------
 
-const MOCK_RESPONSES: Record<string, string> = {
-  career: `**Multi-System Career Analysis**
-
-Based on your cosmic blueprint, here is a comprehensive career synthesis across three expert systems:
-
-**Western Astrology -- Midheaven & 10th House**
-Your Midheaven in Capricorn suggests a natural inclination toward structured, authoritative roles. With Saturn as the ruler of your MC, you thrive in positions that demand discipline and long-term vision. The current transit of Pluto through your 10th house (2024--2044) indicates a profound transformation in your professional identity -- expect to shed old career skins and emerge in a role that aligns more deeply with your authentic power.
-
-**BaZi (Four Pillars of Destiny)**
-Your Day Master is *Yang Wood* (Jia), rooted in the Tiger branch. Wood Day Masters excel in growth-oriented fields: education, innovation, entrepreneurship, and creative direction. Your Wealth Star sits in the Month Pillar, indicating career earnings peak during your 30s and 40s. The current *Rabbit* year forms a partial combination with your Day Branch, activating your Resource Star -- an ideal period for learning new skills or pursuing certifications.
-
-**Numerology -- Life Path & Expression**
-Life Path 7 combined with Expression Number 3 creates a fascinating tension: the deep researcher who must communicate findings to the world. Careers that marry analytical depth with public-facing expression suit you best -- think research journalism, data storytelling, strategic consulting, or academic publishing.
-
-*The Oracle recommends:* This is a pivotal 18-month window. Begin positioning yourself in roles that blend analytical rigor with creative communication. The stars, the pillars, and the numbers all agree.`,
-
-  relationship: `**Relationship & Compatibility Synthesis**
-
-Drawing from your natal chart, synastry patterns, and personality profile:
-
-**Venus-Mars Dynamics**
-Your Venus in Pisces bestows a deeply romantic, almost transcendent approach to love. You seek soul-level connection rather than surface attraction. Mars in Scorpio intensifies this -- you love fiercely and completely, but can struggle with letting go. The current Venus transit through your 7th house suggests a significant relationship milestone within the next 6 weeks.
-
-**MBTI Compatibility Layer**
-As an INTJ, your ideal partners tend to be ENFP or ENTP types -- they provide the spontaneity and emotional warmth that complements your strategic depth. However, your Moon in Scorpio adds an intensity that pairs best with water or earth moon signs in a partner.
-
-**Enneagram 5w4 in Love**
-You need intellectual stimulation *and* emotional depth in partnership. Surface-level connections drain you. You're most fulfilled when your partner respects your need for solitude while being emotionally available during your windows of openness.
-
-*The Oracle observes:* Your chart shows a pattern of late-blooming relationships that deepen significantly over time. Trust the process.`,
-
-  general: `**Holistic Reading for Today**
-
-Let me consult the full ensemble for your current cosmic weather:
-
-**Transit Highlights**
-- Mercury conjunct your natal Sun sharpens your communication -- excellent day for important conversations or writing
-- Moon in Sagittarius expands your emotional horizon; you may feel more adventurous than usual
-- Mars approaching a square with natal Saturn suggests caution around impulsive spending or confrontation in the afternoon hours
-
-**BaZi Day Energy**
-Today is a *Yin Water* day on a *Pig* branch. For your Yang Wood Day Master, Yin Water is your Resource element -- this means today favors learning, absorbing information, and planning rather than aggressive action. Think of yourself as a tree being nourished by gentle rain.
-
-**Numerological Cycle**
-You are in a Personal Month 9 within a Personal Year 5. This is a month of endings and completions within a larger year of change. Something you have been carrying may need to be released to make room for what is coming in the next cycle.
-
-**Biorhythm Snapshot**
-- Physical: 72% (ascending) -- good energy for moderate exercise
-- Emotional: -34% (descending) -- be mindful of mood dips; they are temporary
-- Intellectual: 91% (peak) -- your mind is sharp; tackle complex problems now
-
-*The Oracle suggests:* Use today's intellectual peak to plan and strategize. Save physical tasks for tomorrow when your emotional cycle begins its upswing. The cosmic weather favors contemplation over action.`,
-};
-
-function getOracleResponse(userMessage: string): string {
-  const lower = userMessage.toLowerCase();
-  if (lower.includes("career") || lower.includes("job") || lower.includes("work") || lower.includes("profession")) {
-    return MOCK_RESPONSES.career;
+function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("envious_access_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
   }
-  if (lower.includes("relationship") || lower.includes("love") || lower.includes("partner") || lower.includes("compatibility")) {
-    return MOCK_RESPONSES.relationship;
-  }
-  return MOCK_RESPONSES.general;
-}
-
-// ---------------------------------------------------------------------------
-// Sample sessions with pre-built conversations
-// ---------------------------------------------------------------------------
-
-function createSampleSessions(): ChatSession[] {
-  const now = new Date();
-  const yesterday = new Date(now.getTime() - 86400000);
-  const twoDaysAgo = new Date(now.getTime() - 172800000);
-
-  return [
-    {
-      id: "sample-1",
-      title: "Career path analysis",
-      provider: "anthropic",
-      createdAt: yesterday,
-      messages: [
-        {
-          id: "s1-welcome",
-          role: "assistant",
-          content: WELCOME_MESSAGE,
-          timestamp: yesterday,
-        },
-        {
-          id: "s1-q1",
-          role: "user",
-          content: "What does my chart say about career?",
-          timestamp: new Date(yesterday.getTime() + 60000),
-        },
-        {
-          id: "s1-a1",
-          role: "assistant",
-          content: MOCK_RESPONSES.career,
-          timestamp: new Date(yesterday.getTime() + 65000),
-        },
-      ],
-    },
-    {
-      id: "sample-2",
-      title: "Love & compatibility reading",
-      provider: "openai",
-      createdAt: twoDaysAgo,
-      messages: [
-        {
-          id: "s2-welcome",
-          role: "assistant",
-          content: WELCOME_MESSAGE,
-          timestamp: twoDaysAgo,
-        },
-        {
-          id: "s2-q1",
-          role: "user",
-          content: "Tell me about my relationship patterns and compatibility",
-          timestamp: new Date(twoDaysAgo.getTime() + 60000),
-        },
-        {
-          id: "s2-a1",
-          role: "assistant",
-          content: MOCK_RESPONSES.relationship,
-          timestamp: new Date(twoDaysAgo.getTime() + 65000),
-        },
-      ],
-    },
-    {
-      id: "sample-3",
-      title: "Daily cosmic weather",
-      provider: "openrouter",
-      createdAt: twoDaysAgo,
-      messages: [
-        {
-          id: "s3-welcome",
-          role: "assistant",
-          content: WELCOME_MESSAGE,
-          timestamp: twoDaysAgo,
-        },
-        {
-          id: "s3-q1",
-          role: "user",
-          content: "Give me a full reading for today",
-          timestamp: new Date(twoDaysAgo.getTime() + 120000),
-        },
-        {
-          id: "s3-a1",
-          role: "assistant",
-          content: MOCK_RESPONSES.general,
-          timestamp: new Date(twoDaysAgo.getTime() + 125000),
-        },
-      ],
-    },
-  ];
+  return headers;
 }
 
 // ---------------------------------------------------------------------------
@@ -238,9 +93,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
   }
 
   function renderInline(str: string): React.ReactNode {
-    // Bold + italic
     const parts: React.ReactNode[] = [];
-    // Process bold (**text**) and italic (*text*)
     const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__|_(.+?)_)/g;
     let lastIndex = 0;
     let match;
@@ -250,16 +103,12 @@ function renderMarkdown(text: string): React.ReactNode[] {
         parts.push(str.slice(lastIndex, match.index));
       }
       if (match[2]) {
-        // **bold**
         parts.push(<strong key={match.index} className="font-semibold text-text-primary">{match[2]}</strong>);
       } else if (match[3]) {
-        // *italic*
         parts.push(<em key={match.index} className="italic text-accent-purple">{match[3]}</em>);
       } else if (match[4]) {
-        // __bold__
         parts.push(<strong key={match.index} className="font-semibold text-text-primary">{match[4]}</strong>);
       } else if (match[5]) {
-        // _italic_
         parts.push(<em key={match.index} className="italic text-accent-purple">{match[5]}</em>);
       }
       lastIndex = regex.lastIndex;
@@ -274,7 +123,6 @@ function renderMarkdown(text: string): React.ReactNode[] {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Unordered list item (- or *)
     if (/^[-*]\s+/.test(trimmed)) {
       listItems.push(trimmed.replace(/^[-*]\s+/, ""));
       continue;
@@ -282,13 +130,11 @@ function renderMarkdown(text: string): React.ReactNode[] {
 
     flushList();
 
-    // Empty line
     if (trimmed === "") {
       elements.push(<div key={`br-${i}`} className="h-2" />);
       continue;
     }
 
-    // H3-style (**Title**)
     if (/^\*\*[^*]+\*\*$/.test(trimmed)) {
       const title = trimmed.replace(/^\*\*/, "").replace(/\*\*$/, "");
       elements.push(
@@ -299,7 +145,6 @@ function renderMarkdown(text: string): React.ReactNode[] {
       continue;
     }
 
-    // Regular paragraph
     elements.push(
       <p key={`p-${i}`} className="text-sm leading-relaxed text-text-secondary">
         {renderInline(trimmed)}
@@ -437,25 +282,6 @@ function formatSessionDate(date: Date): string {
 }
 
 // ---------------------------------------------------------------------------
-// Placeholder personality data
-// ---------------------------------------------------------------------------
-
-const PERSONALITY_CONTEXT = {
-  mbtiType: "INTJ",
-  enneagram: "5w4",
-  sunSign: "Gemini",
-  moonSign: "Scorpio",
-  ascendant: "Virgo",
-  lifePathNumber: 7,
-  transits: [
-    { planet: "Mercury", aspect: "Conjunct Sun", impact: "positive" as const },
-    { planet: "Venus", aspect: "Trine Moon", impact: "positive" as const },
-    { planet: "Mars", aspect: "Square Saturn", impact: "challenging" as const },
-    { planet: "Jupiter", aspect: "Sextile Asc", impact: "positive" as const },
-  ],
-};
-
-// ---------------------------------------------------------------------------
 // Main Oracle Page Component
 // ---------------------------------------------------------------------------
 
@@ -463,14 +289,13 @@ export default function OraclePage() {
   const { activeProfile } = useProfile();
 
   // -- Session state
-  const [sessions, setSessions] = useState<ChatSession[]>(() => createSampleSessions());
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [provider, setProvider] = useState<Provider>("anthropic");
 
   // -- UI state
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [streamedContent, setStreamedContent] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [contextPanelOpen, setContextPanelOpen] = useState(false);
   const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
@@ -491,7 +316,7 @@ export default function OraclePage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamedContent, isTyping, scrollToBottom]);
+  }, [messages, isTyping, scrollToBottom]);
 
   // -- Close provider dropdown on outside click
   useEffect(() => {
@@ -503,6 +328,17 @@ export default function OraclePage() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // -- Build birth data for API context
+  const birthPayload = activeProfile
+    ? {
+        date: activeProfile.birthDate,
+        time: activeProfile.birthTime,
+        latitude: activeProfile.lat,
+        longitude: activeProfile.lon,
+        timezone: activeProfile.timezone,
+      }
+    : null;
 
   // -- Create new session
   const createNewSession = useCallback(() => {
@@ -522,7 +358,6 @@ export default function OraclePage() {
     };
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
-    setStreamedContent("");
     setIsTyping(false);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [provider, activeProfile]);
@@ -539,49 +374,45 @@ export default function OraclePage() {
     [activeSessionId]
   );
 
-  // -- Typewriter effect for Oracle responses
-  const typewriterEffect = useCallback(
-    (fullText: string, sessionId: string) => {
-      const words = fullText.split(" ");
-      let currentIndex = 0;
-      setStreamedContent("");
-      setIsTyping(true);
+  // -- Call Oracle API
+  const callOracleAPI = useCallback(
+    async (
+      conversationHistory: { role: string; content: string }[],
+    ): Promise<string> => {
+      const headers = getHeaders();
 
-      const interval = setInterval(() => {
-        currentIndex++;
-        const partial = words.slice(0, currentIndex).join(" ");
-        setStreamedContent(partial);
+      const body: Record<string, unknown> = {
+        messages: conversationHistory,
+      };
+      if (birthPayload) {
+        body.context = { birth_data: birthPayload };
+      }
 
-        if (currentIndex >= words.length) {
-          clearInterval(interval);
-          setIsTyping(false);
-          setStreamedContent("");
+      const res = await fetch(`${API_URL}/api/v1/oracle/chat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
 
-          // Add full message to session
-          const oracleMessage: ChatMessage = {
-            id: generateId(),
-            role: "assistant",
-            content: fullText,
-            timestamp: new Date(),
-          };
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`API error ${res.status}: ${errBody}`);
+      }
 
-          setSessions((prev) =>
-            prev.map((s) =>
-              s.id === sessionId
-                ? { ...s, messages: [...s.messages, oracleMessage] }
-                : s
-            )
-          );
-        }
-      }, 20);
-
-      return () => clearInterval(interval);
+      const json = await res.json();
+      return (
+        json.response ??
+        json.data?.response ??
+        json.message ??
+        json.content ??
+        "I was unable to generate a response. Please try again."
+      );
     },
-    []
+    [birthPayload],
   );
 
   // -- Send message
-  const sendMessage = useCallback(() => {
+  const sendMessage = useCallback(async () => {
     const text = inputValue.trim();
     if (!text || isTyping) return;
 
@@ -616,10 +447,11 @@ export default function OraclePage() {
       timestamp: new Date(),
     };
 
+    const capturedSessionId = sessionId;
+
     setSessions((prev) =>
       prev.map((s) => {
-        if (s.id !== sessionId) return s;
-        // Update title if it is still the default
+        if (s.id !== capturedSessionId) return s;
         const updatedTitle =
           s.title === "New conversation"
             ? text.length > 40
@@ -635,13 +467,54 @@ export default function OraclePage() {
     );
 
     setInputValue("");
+    setIsTyping(true);
 
-    // Simulate Oracle response after a short delay
-    setTimeout(() => {
-      const responseText = getOracleResponse(text);
-      typewriterEffect(responseText, sessionId!);
-    }, 800);
-  }, [inputValue, isTyping, activeSessionId, provider, typewriterEffect, activeProfile]);
+    try {
+      // Build conversation history for the API (excluding welcome, just role+content)
+      const currentSession = sessions.find((s) => s.id === capturedSessionId);
+      const history = [
+        ...(currentSession?.messages ?? [])
+          .filter((m) => m.role === "user" || (m.role === "assistant" && m.id !== currentSession?.messages[0]?.id))
+          .map((m) => ({ role: m.role, content: m.content })),
+        { role: "user" as const, content: text },
+      ];
+
+      const responseText = await callOracleAPI(history);
+
+      const oracleMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content: responseText,
+        timestamp: new Date(),
+      };
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === capturedSessionId
+            ? { ...s, messages: [...s.messages, oracleMessage] }
+            : s
+        )
+      );
+    } catch (err) {
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content: `Sorry, I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`,
+        timestamp: new Date(),
+        error: true,
+      };
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === capturedSessionId
+            ? { ...s, messages: [...s.messages, errorMessage] }
+            : s
+        )
+      );
+    } finally {
+      setIsTyping(false);
+    }
+  }, [inputValue, isTyping, activeSessionId, provider, sessions, callOracleAPI, activeProfile]);
 
   // -- Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -705,17 +578,12 @@ export default function OraclePage() {
           <div className="flex flex-col gap-0.5">
             {sessions.map((session) => {
               const isActive = session.id === activeSessionId;
-              const preview =
-                session.messages.length > 1
-                  ? session.messages[session.messages.length - 1].content.slice(0, 60) + "..."
-                  : "New conversation";
 
               return (
                 <button
                   key={session.id}
                   onClick={() => {
                     setActiveSessionId(session.id);
-                    setStreamedContent("");
                     setIsTyping(false);
                   }}
                   className={`group relative flex flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors ${
@@ -768,11 +636,14 @@ export default function OraclePage() {
               </button>
             )}
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-blue/15">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-blue/15" style={{ boxShadow: "0 0 12px rgba(59, 130, 246, 0.15)" }}>
                 <OracleIcon className="h-4.5 w-4.5 text-accent-blue" />
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-text-primary">The Oracle</h1>
+                <h1 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                  <span>{"\u2728"}</span>
+                  The Oracle
+                </h1>
                 <p className="text-xs text-text-muted">27-Expert Ensemble Intelligence</p>
               </div>
             </div>
@@ -837,7 +708,7 @@ export default function OraclePage() {
               {/* Empty state */}
               {!activeSession && (
                 <div className="flex flex-col items-center justify-center h-full px-6">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-blue/10 mb-6">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-blue/10 mb-6" style={{ boxShadow: "0 0 24px rgba(59, 130, 246, 0.12)" }}>
                     <OracleIcon className="h-8 w-8 text-accent-blue" />
                   </div>
                   <h2 className="text-xl font-bold text-text-primary mb-2">
@@ -898,6 +769,8 @@ export default function OraclePage() {
                           className={`rounded-2xl px-4 py-3 ${
                             msg.role === "user"
                               ? "bg-accent-blue text-white rounded-br-md"
+                              : msg.error
+                              ? "bg-accent-rose/10 border border-accent-rose/20 rounded-bl-md"
                               : "bg-card border border-border rounded-bl-md"
                           }`}
                         >
@@ -927,23 +800,8 @@ export default function OraclePage() {
                     </div>
                   ))}
 
-                  {/* Streaming / typing indicator */}
-                  {isTyping && streamedContent && (
-                    <div className="mb-6 flex justify-start animate-fade-in">
-                      <div className="mr-3 mt-0.5 shrink-0">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-blue/15">
-                          <OracleIcon className="h-4 w-4 text-accent-blue" />
-                        </div>
-                      </div>
-                      <div className="max-w-[85%]">
-                        <div className="rounded-2xl rounded-bl-md bg-card border border-border px-4 py-3">
-                          <div>{renderMarkdown(streamedContent)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {isTyping && !streamedContent && <TypingIndicator />}
+                  {/* Typing indicator while waiting for API */}
+                  {isTyping && <TypingIndicator />}
 
                   <div ref={messagesEndRef} />
                 </div>
@@ -1034,72 +892,25 @@ export default function OraclePage() {
                   </div>
                 </div>
 
-                {/* MBTI Badge */}
+                {/* API Status */}
                 <div>
                   <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-                    Personality Type
+                    Connection
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="info">{PERSONALITY_CONTEXT.mbtiType}</Badge>
-                    <Badge variant="neutral">{PERSONALITY_CONTEXT.enneagram}</Badge>
-                    <Badge variant="neutral">LP {PERSONALITY_CONTEXT.lifePathNumber}</Badge>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-accent-emerald animate-pulse" />
+                    <span className="text-xs text-text-secondary">Live API</span>
                   </div>
-                </div>
-
-                {/* Sun / Moon / Ascendant */}
-                <div>
-                  <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-                    Natal Positions
+                  <p className="text-xs text-text-muted mt-1 break-all">
+                    {API_URL}
                   </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between rounded-lg bg-card/50 px-3 py-2">
-                      <span className="text-xs text-text-muted">{"\u2609"} Sun</span>
-                      <span className="text-xs font-medium text-text-primary">
-                        {PERSONALITY_CONTEXT.sunSign}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-card/50 px-3 py-2">
-                      <span className="text-xs text-text-muted">{"\u263D"} Moon</span>
-                      <span className="text-xs font-medium text-text-primary">
-                        {PERSONALITY_CONTEXT.moonSign}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-card/50 px-3 py-2">
-                      <span className="text-xs text-text-muted">{"\u2191"} Ascendant</span>
-                      <span className="text-xs font-medium text-text-primary">
-                        {PERSONALITY_CONTEXT.ascendant}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Current Transits */}
-                <div>
-                  <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-                    Current Transits
-                  </p>
-                  <div className="space-y-1.5">
-                    {PERSONALITY_CONTEXT.transits.map((t) => (
-                      <div
-                        key={t.planet}
-                        className="flex items-center justify-between rounded-lg bg-card/50 px-3 py-2"
-                      >
-                        <span className="text-xs text-text-secondary">{t.planet}</span>
-                        <Badge
-                          variant={t.impact === "positive" ? "healthy" : "degraded"}
-                        >
-                          {t.aspect}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Context note */}
                 <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 p-3">
                   <p className="text-xs text-accent-blue leading-relaxed">
-                    Context is included in every query. The Oracle uses your natal chart, personality
-                    type, and current transits to personalize every response.
+                    Your birth data is included as context in every query. The Oracle uses your natal chart
+                    and personality type to personalize every response.
                   </p>
                 </div>
               </div>

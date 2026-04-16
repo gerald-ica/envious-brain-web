@@ -134,6 +134,15 @@ function LoginForm() {
                 placeholder="Enter your password"
                 className="w-full rounded-lg border border-border bg-navy/60 px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue transition-colors"
               />
+              <div className="mt-1.5 text-right">
+                <button
+                  type="button"
+                  onClick={() => alert("Password reset coming soon")}
+                  className="text-sm text-text-muted hover:text-accent-blue transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
             </div>
 
             {/* Submit */}

@@ -212,11 +212,26 @@ function UserMenu() {
 
 // ---- Top bar --------------------------------------------------------------
 
-export function TopBar() {
+interface TopBarProps {
+  onMenuToggle?: () => void;
+}
+
+export function TopBar({ onMenuToggle }: TopBarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-4">
-      {/* Left: title (visible on mobile when sidebar hidden) */}
-      <div className="flex items-center gap-3 lg:hidden">
+      {/* Left: hamburger + title (visible on mobile when sidebar hidden) */}
+      <div className="flex items-center gap-2 md:hidden">
+        <button
+          onClick={onMenuToggle}
+          className="rounded-lg p-2 text-text-muted hover:bg-white/5 hover:text-text-primary transition-colors"
+          aria-label="Toggle sidebar"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="5" x2="17" y2="5" />
+            <line x1="3" y1="10" x2="17" y2="10" />
+            <line x1="3" y1="15" x2="17" y2="15" />
+          </svg>
+        </button>
         <span className="text-lg font-bold text-accent-blue">{"\u2727"}</span>
         <span className="text-sm font-bold tracking-wide text-text-primary">
           ENVI-OUS BRAIN
@@ -224,7 +239,7 @@ export function TopBar() {
       </div>
 
       {/* Spacer for desktop (sidebar has its own branding) */}
-      <div className="hidden lg:block" />
+      <div className="hidden md:block" />
 
       {/* Right side controls */}
       <div className="flex items-center gap-3">

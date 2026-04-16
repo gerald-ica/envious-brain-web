@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProfile, type Profile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,8 +49,9 @@ export default function SettingsPage() {
     useProfile();
 
   // ---- Profile Management state ----
-  const [showCreateProfile, setShowCreateProfile] = useState(false);
+  const [showCreateProfile, setShowCreateProfile] = useState(!activeProfile && profiles.length === 0);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Create profile form
   const [pName, setPName] = useState("");
@@ -60,6 +61,7 @@ export default function SettingsPage() {
   const [pLat, setPLat] = useState("");
   const [pLon, setPLon] = useState("");
   const [pTz, setPTz] = useState("America/New_York");
+  const [createError, setCreateError] = useState("");
 
   // Edit profile form
   const [eName, setEName] = useState("");
@@ -81,10 +83,31 @@ export default function SettingsPage() {
   const [accent, setAccent] = useState<AccentColor>("blue");
   const [language, setLanguage] = useState<Language>("EN");
 
+  // Auto-open profile creation form when no profiles exist
+  useEffect(() => {
+    if (profiles.length === 0) {
+      setShowCreateProfile(true);
+    }
+  }, [profiles.length]);
+
   // ---- Handlers ----
 
   const handleCreateProfile = () => {
-    if (!pName.trim() || !pDate) return;
+    setCreateError("");
+
+    if (!pName.trim()) {
+      setCreateError("Name is required");
+      return;
+    }
+    if (!pDate) {
+      setCreateError("Birth date is required");
+      return;
+    }
+    if (!pCity && !pLat) {
+      setCreateError("Please search for a birth city");
+      return;
+    }
+
     const newProfile: Profile = {
       id: `profile-${Date.now()}`,
       name: pName.trim(),
@@ -104,6 +127,7 @@ export default function SettingsPage() {
     setPLon("");
     setPTz("America/New_York");
     setShowCreateProfile(false);
+    setCreateError("");
   };
 
   const startEditProfile = (profile: Profile) => {
@@ -136,6 +160,17 @@ export default function SettingsPage() {
       setProfile(updated);
     }
     setEditingProfile(null);
+  };
+
+  const handleDeleteProfile = (id: string) => {
+    if (deleteConfirm === id) {
+      removeProfile(id);
+      setDeleteConfirm(null);
+    } else {
+      setDeleteConfirm(id);
+      // Auto-clear confirm after 3 seconds
+      setTimeout(() => setDeleteConfirm((prev) => (prev === id ? null : prev)), 3000);
+    }
   };
 
   const handleExportProfiles = () => {
@@ -209,6 +244,13 @@ export default function SettingsPage() {
                   {activeProfile.city || `${activeProfile.lat.toFixed(4)}, ${activeProfile.lon.toFixed(4)}`} --{" "}
                   {activeProfile.timezone}
                 </p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-text-muted">
+                  <span>Lat: {activeProfile.lat.toFixed(4)}</span>
+                  <span>{"\u00b7"}</span>
+                  <span>Lon: {activeProfile.lon.toFixed(4)}</span>
+                  <span>{"\u00b7"}</span>
+                  <span>TZ: {activeProfile.timezone}</span>
+                </div>
               </div>
               <Button
                 variant="secondary"
@@ -225,7 +267,10 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3 mb-4">
           <Button
             variant="secondary"
-            onClick={() => setShowCreateProfile((prev) => !prev)}
+            onClick={() => {
+              setShowCreateProfile((prev) => !prev);
+              setCreateError("");
+            }}
           >
             {showCreateProfile ? "Cancel" : "+ Create New Profile"}
           </Button>
@@ -234,15 +279,20 @@ export default function SettingsPage() {
         {showCreateProfile && (
           <Card className="mb-4">
             <h3 className="mb-4 text-sm font-semibold text-text-primary">New Profile</h3>
+            {createError && (
+              <div className="mb-4 rounded-lg bg-accent-rose/10 border border-accent-rose/20 px-3 py-2">
+                <p className="text-sm text-accent-rose">{createError}</p>
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Input
-                label="Name"
+                label="Name *"
                 placeholder="e.g. John Doe"
                 value={pName}
                 onChange={(e) => setPName(e.target.value)}
               />
               <Input
-                label="Birth Date"
+                label="Birth Date *"
                 type="date"
                 value={pDate}
                 onChange={(e) => setPDate(e.target.value)}
@@ -253,19 +303,27 @@ export default function SettingsPage() {
                 value={pTime}
                 onChange={(e) => setPTime(e.target.value)}
               />
-              <CitySearch
-                label="Birth City"
-                value={pCity}
-                onChange={(city) => {
-                  setPCity(city.name);
-                  setPLat(String(city.lat));
-                  setPLon(String(city.lon));
-                  setPTz(city.timezone);
-                }}
-                placeholder="Search for a city..."
-              />
+              <div className="sm:col-span-2 lg:col-span-3">
+                <CitySearch
+                  label="Birth City *"
+                  value={pCity}
+                  onChange={(city) => {
+                    setPCity(city.name);
+                    setPLat(String(city.lat));
+                    setPLon(String(city.lon));
+                    setPTz(city.timezone);
+                  }}
+                  placeholder="Search for a city..."
+                />
+                {pLat && (
+                  <p className="mt-1 text-xs text-text-muted">
+                    {pCity} ({pLat}, {pLon}) -- {pTz}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-xs text-text-muted">* Required fields</p>
               <Button onClick={handleCreateProfile}>Create Profile</Button>
             </div>
           </Card>
@@ -313,6 +371,13 @@ export default function SettingsPage() {
                   }}
                   placeholder="Search for a city..."
                 />
+                {eLat && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-text-muted">
+                      Coordinates: {eLat}, {eLon} -- Timezone: {eTz}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <Button variant="secondary" onClick={() => setEditingProfile(null)}>
@@ -348,6 +413,7 @@ export default function SettingsPage() {
                     </p>
                     <p className="text-xs text-text-muted">
                       {profile.birthDate} at {profile.birthTime}
+                      {profile.city ? ` -- ${profile.city}` : ""}
                     </p>
                   </div>
                   {activeProfile?.id === profile.id && (
@@ -372,11 +438,14 @@ export default function SettingsPage() {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="text-xs px-2 py-1 text-accent-rose"
-                    onClick={() => removeProfile(profile.id)}
-                    disabled={profiles.length <= 1}
+                    className={`text-xs px-2 py-1 ${
+                      deleteConfirm === profile.id
+                        ? "text-white bg-accent-rose"
+                        : "text-accent-rose"
+                    }`}
+                    onClick={() => handleDeleteProfile(profile.id)}
                   >
-                    Delete
+                    {deleteConfirm === profile.id ? "Confirm?" : "Delete"}
                   </Button>
                 </div>
               </div>

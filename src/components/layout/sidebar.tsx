@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -191,15 +191,40 @@ function NavGroupSection({
 
 // ---- Sidebar --------------------------------------------------------------
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    if (mobileOpen && onClose) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   return (
-    <aside
-      className={`flex flex-col border-r border-border bg-surface transition-all duration-200 ${
-        collapsed ? "w-16" : "w-64"
-      }`}
-    >
+    <>
+      {/* Mobile overlay backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`flex flex-col border-r border-border bg-surface transition-all duration-200 ${
+          collapsed ? "md:w-16" : "md:w-64"
+        } ${
+          mobileOpen
+            ? "fixed inset-y-0 left-0 z-50 w-64"
+            : "hidden md:flex"
+        }`}
+      >
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b border-border px-3">
         {!collapsed && (
@@ -251,5 +276,6 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+    </>
   );
 }
