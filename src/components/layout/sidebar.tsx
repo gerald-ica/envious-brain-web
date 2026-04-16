@@ -31,14 +31,14 @@ const navigation: NavEntry[] = [
     label: "Charts",
     icon: "\u2609", // ☉
     items: [
-      { label: "Western", href: "/charts/western", icon: "\u2600" },
-      { label: "Vedic", href: "/charts/vedic", icon: "\u0950" },
-      { label: "BaZi", href: "/charts/bazi", icon: "\u7528" },
-      { label: "Synastry", href: "/charts/synastry", icon: "\u2661" },
-      { label: "Transits", href: "/charts/transits", icon: "\u21BB" },
-      { label: "Numerology", href: "/charts/numerology", icon: "#" },
-      { label: "Human Design", href: "/charts/human-design", icon: "\u25CE" },
-      { label: "Harmonics", href: "/charts/harmonics", icon: "\u223F" },
+      { label: "Western", href: "/dashboard/charts/western", icon: "\u2600" },
+      { label: "Vedic", href: "/dashboard/charts/vedic", icon: "\u0950" },
+      { label: "BaZi", href: "/dashboard/charts/bazi", icon: "\u7528" },
+      { label: "Synastry", href: "/dashboard/charts/synastry", icon: "\u2661" },
+      { label: "Transits", href: "/dashboard/charts/transits", icon: "\u21BB" },
+      { label: "Numerology", href: "/dashboard/charts/numerology", icon: "#" },
+      { label: "Human Design", href: "/dashboard/charts/human-design", icon: "\u25CE" },
+      { label: "Harmonics", href: "/dashboard/charts/harmonics", icon: "\u223F" },
     ],
   },
 
@@ -46,11 +46,11 @@ const navigation: NavEntry[] = [
     label: "Personality",
     icon: "\u2606", // ☆
     items: [
-      { label: "MBTI", href: "/personality/mbti", icon: "\u2B21" },
-      { label: "Enneagram", href: "/personality/enneagram", icon: "\u25B3" },
-      { label: "Archetypes", href: "/personality/archetypes", icon: "\u2640" },
-      { label: "Biorhythm", href: "/personality/biorhythm", icon: "\u223C" },
-      { label: "Synthesis", href: "/personality/synthesis", icon: "\u2726" },
+      { label: "MBTI", href: "/dashboard/personality/mbti", icon: "\u2B21" },
+      { label: "Enneagram", href: "/dashboard/personality/enneagram", icon: "\u25B3" },
+      { label: "Archetypes", href: "/dashboard/personality/archetypes", icon: "\u2640" },
+      { label: "Biorhythm", href: "/dashboard/personality/biorhythm", icon: "\u223C" },
+      { label: "Synthesis", href: "/dashboard/personality/synthesis", icon: "\u2726" },
     ],
   },
 
@@ -66,13 +66,13 @@ const navigation: NavEntry[] = [
     label: "Explore",
     icon: "\u2638", // ☸
     items: [
-      { label: "I Ching", href: "/explore/i-ching", icon: "\u2630" },
-      { label: "Tarot", href: "/explore/tarot", icon: "\u2660" },
-      { label: "Feng Shui", href: "/explore/feng-shui", icon: "\u98CE" },
-      { label: "Nine Star Ki", href: "/explore/nine-star-ki", icon: "\u2729" },
-      { label: "Space Weather", href: "/explore/space-weather", icon: "\u26C5" },
-      { label: "Color Psych", href: "/explore/color-psych", icon: "\u25C9" },
-      { label: "Spirit Animal", href: "/explore/spirit-animal", icon: "\u2766" },
+      { label: "I Ching", href: "/dashboard/explore/iching", icon: "\u2630" },
+      { label: "Tarot", href: "/dashboard/explore/tarot", icon: "\u2660" },
+      { label: "Feng Shui", href: "/dashboard/explore/fengshui", icon: "\u98CE" },
+      { label: "Nine Star Ki", href: "/dashboard/explore/nine-star-ki", icon: "\u2729" },
+      { label: "Space Weather", href: "/dashboard/explore/space-weather", icon: "\u26C5" },
+      { label: "Color Psych", href: "/dashboard/explore/color-psych", icon: "\u25C9" },
+      { label: "Spirit Animal", href: "/dashboard/explore/spirit-animal", icon: "\u2766" },
     ],
   },
 
@@ -80,11 +80,11 @@ const navigation: NavEntry[] = [
     label: "Developer",
     icon: "\u27E8\u27E9", // ⟨⟩
     items: [
-      { label: "API Keys", href: "/developer/api-keys", icon: "\u26BF" },
-      { label: "Usage", href: "/developer/usage", icon: "\u2261" },
-      { label: "Docs", href: "/developer/docs", icon: "\u2637" },
-      { label: "Sandbox", href: "/developer/sandbox", icon: "\u25B6" },
-      { label: "Webhooks", href: "/developer/webhooks", icon: "\u21C4" },
+      { label: "API Keys", href: "/dashboard/developer/keys", icon: "\u26BF" },
+      { label: "Usage", href: "/dashboard/developer/usage", icon: "\u2261" },
+      { label: "Docs", href: "/dashboard/developer/docs", icon: "\u2637" },
+      { label: "Sandbox", href: "/dashboard/developer/sandbox", icon: "\u25B6" },
+      { label: "Webhooks", href: "/dashboard/developer/webhooks", icon: "\u21C4" },
     ],
   },
 
@@ -92,10 +92,10 @@ const navigation: NavEntry[] = [
     label: "Admin",
     icon: "\u2699", // ⚙
     items: [
-      { label: "White-Label", href: "/admin/white-label", icon: "\u269B" },
-      { label: "Analytics", href: "/admin/analytics", icon: "\u2593" },
-      { label: "Audit", href: "/admin/audit", icon: "\u2611" },
-      { label: "Config", href: "/admin/config", icon: "\u2638" },
+      { label: "White-Label", href: "/dashboard/admin/whitelabel", icon: "\u269B" },
+      { label: "Analytics", href: "/dashboard/admin/analytics", icon: "\u2593" },
+      { label: "Audit", href: "/dashboard/admin/audit", icon: "\u2611" },
+      { label: "Config", href: "/dashboard/admin/config", icon: "\u2638" },
     ],
   },
 
@@ -103,12 +103,12 @@ const navigation: NavEntry[] = [
     label: "Widgets",
     icon: "\u25A3", // ▣
     items: [
-      { label: "Gallery", href: "/widgets/gallery", icon: "\u25A6" },
-      { label: "Builder", href: "/widgets/builder", icon: "\u2692" },
+      { label: "Gallery", href: "/dashboard/widgets/gallery", icon: "\u25A6" },
+      { label: "Builder", href: "/dashboard/widgets/builder", icon: "\u2692" },
     ],
   },
 
-  { label: "Settings", href: "/settings", icon: "\u2699" },
+  { label: "Settings", href: "/dashboard/settings", icon: "\u2699" },
 ];
 
 // ---- Components -----------------------------------------------------------
