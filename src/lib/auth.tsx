@@ -154,6 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
       });
+      // Clear any demo/leftover profile data
+      localStorage.removeItem("envious_profiles");
+      localStorage.removeItem("envious_active_profile");
       setUser(data.user);
     },
     [storeTokens],
@@ -187,6 +190,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
       });
+      // Clear any demo/leftover profile data
+      localStorage.removeItem("envious_profiles");
+      localStorage.removeItem("envious_active_profile");
       setUser(data.user);
     },
     [storeTokens],

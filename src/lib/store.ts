@@ -32,9 +32,9 @@ export interface ProfileState {
   toggleTheme: () => void;
 }
 
-// ---- Default profile for demo ---------------------------------------------
+// ---- Default profile for demo (landing page preview only) ----------------
 
-const DEFAULT_PROFILE: Profile = {
+export const DEFAULT_PROFILE: Profile = {
   id: "demo",
   name: "Demo User",
   birthDate: "1990-06-15",
@@ -50,10 +50,8 @@ const DEFAULT_PROFILE: Profile = {
 const ProfileContext = createContext<ProfileState | null>(null);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [activeProfile, setActiveProfile] = useState<Profile | null>(
-    DEFAULT_PROFILE,
-  );
-  const [profiles, setProfiles] = useState<Profile[]>([DEFAULT_PROFILE]);
+  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   const setProfile = useCallback(

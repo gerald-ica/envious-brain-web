@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 // ---- Placeholder data (will be replaced with API calls) -------------------
 
@@ -71,13 +73,45 @@ function BiorhythmBar({
 export default function DashboardPage() {
   const { activeProfile } = useProfile();
 
+  // Empty state -- no profile yet
+  if (!activeProfile) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
+          <p className="text-sm text-text-muted">
+            Welcome to ENVI-OUS-BRAIN
+          </p>
+        </div>
+
+        <Card title="Create Your Profile" glow="blue">
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed text-text-secondary">
+              To view your personalized natal chart, transits, and daily
+              forecast, add your first profile. All you need is a birth date,
+              time, and location.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/dashboard/settings">
+                <Button>Add your first profile</Button>
+              </Link>
+              <span className="text-xs text-text-muted">
+                Your data is private and stored with end-to-end authentication.
+              </span>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
         <p className="text-sm text-text-muted">
-          Overview for {activeProfile?.name ?? "Unknown"}
+          Overview for {activeProfile.name}
         </p>
       </div>
 
