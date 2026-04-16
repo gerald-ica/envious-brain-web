@@ -324,7 +324,7 @@ export default function LandingPage() {
                   </a>
                 </li>
                 <li>
-                  <a href="#pricing" className="text-sm text-text-muted hover:text-text-primary transition-colors">
+                  <a href="/pricing" className="text-sm text-text-muted hover:text-text-primary transition-colors">
                     Pricing
                   </a>
                 </li>
@@ -353,12 +353,12 @@ export default function LandingPage() {
               <h4 className="mb-3 text-sm font-semibold text-text-primary">Legal</h4>
               <ul className="flex flex-col gap-2">
                 <li>
-                  <a href="#" className="text-sm text-text-muted hover:text-text-primary transition-colors">
+                  <a href="/privacy" className="text-sm text-text-muted hover:text-text-primary transition-colors">
                     Privacy Policy
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-text-muted hover:text-text-primary transition-colors">
+                  <a href="/terms" className="text-sm text-text-muted hover:text-text-primary transition-colors">
                     Terms of Service
                   </a>
                 </li>

@@ -39,6 +39,23 @@ const navigation: NavEntry[] = [
       { label: "Numerology", href: "/dashboard/charts/numerology", icon: "#" },
       { label: "Human Design", href: "/dashboard/charts/human-design", icon: "\u25CE" },
       { label: "Harmonics", href: "/dashboard/charts/harmonics", icon: "\u223F" },
+      { label: "Solar Return", href: "/dashboard/charts/solar-return", icon: "\u2609" },
+      { label: "Progressions", href: "/dashboard/charts/progressions", icon: "\u2192" },
+      { label: "Draconic", href: "/dashboard/charts/draconic", icon: "\u260A" },
+    ],
+  },
+
+  {
+    label: "Techniques",
+    icon: "\u2692", // ⚒
+    items: [
+      { label: "Hellenistic", href: "/dashboard/techniques/hellenistic", icon: "\u03A9" },
+      { label: "Fixed Stars", href: "/dashboard/techniques/fixed-stars", icon: "\u2605" },
+      { label: "Arabic Parts", href: "/dashboard/techniques/arabic-parts", icon: "\u263D" },
+      { label: "Sabian Symbols", href: "/dashboard/techniques/sabian-symbols", icon: "\u25CE" },
+      { label: "Dignities", href: "/dashboard/techniques/dignities", icon: "\u2654" },
+      { label: "Declinations", href: "/dashboard/techniques/declinations", icon: "\u2195" },
+      { label: "Midpoints", href: "/dashboard/techniques/midpoints", icon: "\u2295" },
     ],
   },
 

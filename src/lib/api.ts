@@ -323,6 +323,168 @@ export const api = {
       post<Record<string, unknown>>("/api/v1/psychology/spirit-animal", data),
   },
 
+  // Western Advanced
+  westernAdvanced: {
+    northNode: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/western/north-node",
+        birthToDatetime(birth),
+      ),
+    chiron: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/western/chiron",
+        birthToDatetime(birth),
+      ),
+    asteroids: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/western/asteroids",
+        birthToDatetime(birth),
+      ),
+    fixedStars: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/western/fixed-stars",
+        birthToDatetime(birth),
+      ),
+    arabicParts: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/western/arabic-parts",
+        birthToDatetime(birth),
+      ),
+    draconic: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/western/draconic",
+        birthToDatetime(birth),
+      ),
+    horary: (birth: BirthData, question: string) =>
+      post<Record<string, unknown>>("/api/v1/western/horary", {
+        ...birthToDatetime(birth),
+        question,
+      }),
+    hellenistic: {
+      sect: (birth: BirthData) =>
+        post<Record<string, unknown>>(
+          "/api/v1/western/hellenistic/sect",
+          birthToDatetime(birth),
+        ),
+      profection: (birth: BirthData) =>
+        post<Record<string, unknown>>(
+          "/api/v1/western/hellenistic/profection",
+          birthToDatetime(birth),
+        ),
+      almuten: (birth: BirthData) =>
+        post<Record<string, unknown>>(
+          "/api/v1/western/hellenistic/almuten",
+          birthToDatetime(birth),
+        ),
+    },
+  },
+
+  // Techniques
+  techniques: {
+    declinations: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/declinations",
+        birthToDatetime(birth),
+      ),
+    degreeTheory: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/degree-theory",
+        birthToDatetime(birth),
+      ),
+    dignities: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/dignities",
+        birthToDatetime(birth),
+      ),
+    houseSystems: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/house-systems",
+        birthToDatetime(birth),
+      ),
+    midpoints: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/midpoints",
+        birthToDatetime(birth),
+      ),
+    planetaryHours: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/planetary-hours",
+        birthToDatetime(birth),
+      ),
+    sabianSymbols: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/techniques/sabian-symbols",
+        birthToDatetime(birth),
+      ),
+  },
+
+  // Predictive
+  predictive: {
+    electional: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/predictive/electional",
+        birthToDatetime(birth),
+      ),
+    relocation: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/predictive/relocation",
+        birthToDatetime(birth),
+      ),
+    vimshottari: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/predictive/vimshottari",
+        birthToDatetime(birth),
+      ),
+  },
+
+  // Advanced Charts
+  advancedCharts: {
+    solarReturn: (birth: BirthData, targetYear: number) =>
+      post<Record<string, unknown>>("/api/v1/charts/solar-return", {
+        ...birthToDatetime(birth),
+        target_year: targetYear,
+      }),
+    lunarReturn: (
+      birth: BirthData,
+      targetMonth: number,
+      targetYear: number,
+    ) =>
+      post<Record<string, unknown>>("/api/v1/charts/lunar-return", {
+        ...birthToDatetime(birth),
+        target_month: targetMonth,
+        target_year: targetYear,
+      }),
+    progressions: (birth: BirthData, targetDate: string) =>
+      post<Record<string, unknown>>("/api/v1/charts/progressions", {
+        ...birthToDatetime(birth),
+        target_date: targetDate,
+      }),
+    composite: (
+      person1: { datetime: string; latitude: number; longitude: number },
+      person2: { datetime: string; latitude: number; longitude: number },
+    ) =>
+      post<Record<string, unknown>>("/api/v1/charts/composite", {
+        person1,
+        person2,
+      }),
+    moonPhase: () => get<Record<string, unknown>>("/api/v1/charts/moon-phase"),
+    eclipses: () => get<Record<string, unknown>>("/api/v1/charts/eclipses"),
+  },
+
+  // Eastern
+  eastern: {
+    kpSystem: (birth: BirthData) =>
+      post<Record<string, unknown>>(
+        "/api/v1/eastern/kp-system",
+        birthToDatetime(birth),
+      ),
+    ziwei: (birth: BirthData, gender: string) =>
+      post<Record<string, unknown>>("/api/v1/eastern/ziwei", {
+        ...birthToDatetime(birth),
+        gender,
+      }),
+  },
+
   // Developer
   developer: {
     apiKeys: {
