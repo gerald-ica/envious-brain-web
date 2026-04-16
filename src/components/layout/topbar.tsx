@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 
 // ---- Health indicator -----------------------------------------------------
 
@@ -138,6 +140,76 @@ function ProfileSelector() {
   );
 }
 
+// ---- User menu (auth-aware) -----------------------------------------------
+
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function handleLogout() {
+    logout();
+    router.replace("/login");
+  }
+
+  if (!user) return null;
+
+  const initial = (user.display_name || user.email).charAt(0).toUpperCase();
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text-secondary hover:border-border-hover hover:text-text-primary transition-colors"
+      >
+        <span className="w-5 h-5 rounded-full bg-accent-purple/20 text-accent-purple text-xs flex items-center justify-center font-medium">
+          {initial}
+        </span>
+        <span className="max-w-[120px] truncate hidden sm:inline">
+          {user.display_name || user.email}
+        </span>
+        <span className="text-xs">{"\u25BE"}</span>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-border bg-surface py-1 shadow-xl z-50">
+          {/* User info */}
+          <div className="px-3 py-2 border-b border-border">
+            <p className="text-sm font-medium text-text-primary truncate">
+              {user.display_name}
+            </p>
+            <p className="text-xs text-text-muted truncate">{user.email}</p>
+            {user.tier && (
+              <span className="mt-1 inline-block rounded-full bg-accent-blue/10 px-2 py-0.5 text-xs font-medium text-accent-blue">
+                {user.tier}
+              </span>
+            )}
+          </div>
+          {/* Sign out */}
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-accent-rose hover:bg-white/5 transition-colors"
+          >
+            <span className="text-base">{"\u2192"}</span>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- Top bar --------------------------------------------------------------
 
 export function TopBar() {
@@ -159,6 +231,7 @@ export function TopBar() {
         <HealthDot />
         <ThemeToggle />
         <ProfileSelector />
+        <UserMenu />
       </div>
     </header>
   );

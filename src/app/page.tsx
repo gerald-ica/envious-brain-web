@@ -91,10 +91,16 @@ export default function LandingPage() {
             API Docs
           </a>
           <Link
-            href="/dashboard"
+            href="/login"
+            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/register"
             className="rounded-lg bg-accent-blue px-4 py-2 text-sm font-medium text-white hover:bg-accent-blue/90 transition-colors shadow-lg shadow-accent-blue/20"
           >
-            Launch App
+            Get Started
           </Link>
         </div>
       </nav>

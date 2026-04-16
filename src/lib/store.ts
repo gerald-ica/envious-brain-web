@@ -16,6 +16,7 @@ export interface Profile {
   name: string;
   birthDate: string; // ISO date string  e.g. "1990-06-15"
   birthTime: string; // HH:MM            e.g. "14:30"
+  city: string;      // display name     e.g. "New York, USA"
   lat: number;
   lon: number;
   timezone: string; // IANA timezone     e.g. "America/New_York"
@@ -38,6 +39,7 @@ const DEFAULT_PROFILE: Profile = {
   name: "Demo User",
   birthDate: "1990-06-15",
   birthTime: "14:30",
+  city: "New York, USA",
   lat: 40.7128,
   lon: -74.006,
   timezone: "America/New_York",

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CitySearch } from "@/components/ui/city-search";
 
 // ---------------------------------------------------------------------------
 // Types & Constants
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   const [pName, setPName] = useState("");
   const [pDate, setPDate] = useState("");
   const [pTime, setPTime] = useState("");
+  const [pCity, setPCity] = useState("");
   const [pLat, setPLat] = useState("");
   const [pLon, setPLon] = useState("");
   const [pTz, setPTz] = useState("America/New_York");
@@ -63,6 +65,7 @@ export default function SettingsPage() {
   const [eName, setEName] = useState("");
   const [eDate, setEDate] = useState("");
   const [eTime, setETime] = useState("");
+  const [eCity, setECity] = useState("");
   const [eLat, setELat] = useState("");
   const [eLon, setELon] = useState("");
   const [eTz, setETz] = useState("");
@@ -87,6 +90,7 @@ export default function SettingsPage() {
       name: pName.trim(),
       birthDate: pDate,
       birthTime: pTime || "12:00",
+      city: pCity,
       lat: parseFloat(pLat) || 0,
       lon: parseFloat(pLon) || 0,
       timezone: pTz,
@@ -95,6 +99,7 @@ export default function SettingsPage() {
     setPName("");
     setPDate("");
     setPTime("");
+    setPCity("");
     setPLat("");
     setPLon("");
     setPTz("America/New_York");
@@ -106,6 +111,7 @@ export default function SettingsPage() {
     setEName(profile.name);
     setEDate(profile.birthDate);
     setETime(profile.birthTime);
+    setECity(profile.city || "");
     setELat(String(profile.lat));
     setELon(String(profile.lon));
     setETz(profile.timezone);
@@ -118,6 +124,7 @@ export default function SettingsPage() {
       name: eName.trim(),
       birthDate: eDate,
       birthTime: eTime,
+      city: eCity,
       lat: parseFloat(eLat) || 0,
       lon: parseFloat(eLon) || 0,
       timezone: eTz,
@@ -199,7 +206,7 @@ export default function SettingsPage() {
                   Born {activeProfile.birthDate} at {activeProfile.birthTime}
                 </p>
                 <p className="text-xs text-text-muted mt-1">
-                  {activeProfile.lat.toFixed(4)}, {activeProfile.lon.toFixed(4)} --{" "}
+                  {activeProfile.city || `${activeProfile.lat.toFixed(4)}, ${activeProfile.lon.toFixed(4)}`} --{" "}
                   {activeProfile.timezone}
                 </p>
               </div>
@@ -246,25 +253,16 @@ export default function SettingsPage() {
                 value={pTime}
                 onChange={(e) => setPTime(e.target.value)}
               />
-              <Input
-                label="Latitude"
-                type="number"
-                placeholder="e.g. 40.7128"
-                value={pLat}
-                onChange={(e) => setPLat(e.target.value)}
-              />
-              <Input
-                label="Longitude"
-                type="number"
-                placeholder="e.g. -74.006"
-                value={pLon}
-                onChange={(e) => setPLon(e.target.value)}
-              />
-              <Input
-                label="Timezone"
-                placeholder="e.g. America/New_York"
-                value={pTz}
-                onChange={(e) => setPTz(e.target.value)}
+              <CitySearch
+                label="Birth City"
+                value={pCity}
+                onChange={(city) => {
+                  setPCity(city.name);
+                  setPLat(String(city.lat));
+                  setPLon(String(city.lon));
+                  setPTz(city.timezone);
+                }}
+                placeholder="Search for a city..."
               />
             </div>
             <div className="mt-4 flex justify-end">
@@ -304,22 +302,16 @@ export default function SettingsPage() {
                   value={eTime}
                   onChange={(e) => setETime(e.target.value)}
                 />
-                <Input
-                  label="Latitude"
-                  type="number"
-                  value={eLat}
-                  onChange={(e) => setELat(e.target.value)}
-                />
-                <Input
-                  label="Longitude"
-                  type="number"
-                  value={eLon}
-                  onChange={(e) => setELon(e.target.value)}
-                />
-                <Input
-                  label="Timezone"
-                  value={eTz}
-                  onChange={(e) => setETz(e.target.value)}
+                <CitySearch
+                  label="Birth City"
+                  value={eCity}
+                  onChange={(city) => {
+                    setECity(city.name);
+                    setELat(String(city.lat));
+                    setELon(String(city.lon));
+                    setETz(city.timezone);
+                  }}
+                  placeholder="Search for a city..."
                 />
               </div>
               <div className="mt-6 flex justify-end gap-2">

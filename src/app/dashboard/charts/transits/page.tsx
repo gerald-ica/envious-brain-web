@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CitySearch } from "@/components/ui/city-search";
 
 // ---------------------------------------------------------------------------
 // Transits
@@ -60,6 +61,7 @@ const SIGNIFICANCE_BADGE: Record<string, "error" | "degraded" | "neutral"> = {
 export default function TransitsPage() {
   const [birthDate, setBirthDate] = useState("1990-06-15");
   const [birthTime, setBirthTime] = useState("14:30");
+  const [city, setCity] = useState("New York, USA");
   const [latitude, setLatitude] = useState("40.7128");
   const [longitude, setLongitude] = useState("-74.0060");
   const [calculated, setCalculated] = useState(true);
@@ -120,7 +122,7 @@ export default function TransitsPage() {
 
       {/* Birth Data Form */}
       <Card title="Natal Reference" className="mb-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Input
             label="Birth Date"
             type="date"
@@ -133,19 +135,15 @@ export default function TransitsPage() {
             value={birthTime}
             onChange={(e) => setBirthTime(e.target.value)}
           />
-          <Input
-            label="Latitude"
-            type="number"
-            step="0.0001"
-            value={latitude}
-            onChange={(e) => setLatitude(e.target.value)}
-          />
-          <Input
-            label="Longitude"
-            type="number"
-            step="0.0001"
-            value={longitude}
-            onChange={(e) => setLongitude(e.target.value)}
+          <CitySearch
+            label="Birth City"
+            value={city}
+            onChange={(c) => {
+              setCity(c.name);
+              setLatitude(String(c.lat));
+              setLongitude(String(c.lon));
+            }}
+            placeholder="Search for a city..."
           />
           <div className="flex items-end">
             <Button onClick={handleCalculate} disabled={loading} className="w-full">

@@ -41,8 +41,11 @@ async function apiFetch<T>(
     ...(options.headers as Record<string, string> | undefined),
   };
 
-  // Attach API key when available (client-side only)
+  // Attach auth token when available (client-side only)
   if (typeof window !== "undefined") {
+    const token = localStorage.getItem("envious_access_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const key = localStorage.getItem("envious_api_key");
     if (key) headers["X-API-Key"] = key;
   }
@@ -90,6 +93,25 @@ function put<T>(path: string, body?: unknown, init?: RequestInit) {
 
 function del<T>(path: string, init?: RequestInit) {
   return apiFetch<T>(path, { ...init, method: "DELETE" });
+}
+
+// ---- Auth types -----------------------------------------------------------
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  display_name: string;
+  tier: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  user: AuthUser;
+}
+
+export interface RefreshResponse {
+  access_token: string;
 }
 
 // ---- Domain types (lightweight, will grow) --------------------------------
@@ -159,6 +181,21 @@ export interface UsageStats {
 // ---- API client organized by domain group ---------------------------------
 
 export const api = {
+  // Auth
+  auth: {
+    register: (email: string, password: string, display_name: string) =>
+      post<AuthResponse>("/api/v1/auth/register", {
+        email,
+        password,
+        display_name,
+      }),
+    login: (email: string, password: string) =>
+      post<AuthResponse>("/api/v1/auth/login", { email, password }),
+    refreshToken: (refresh_token: string) =>
+      post<RefreshResponse>("/api/v1/auth/refresh", { refresh_token }),
+    me: () => get<AuthUser>("/api/v1/auth/me"),
+  },
+
   // Health / Meta
   health: {
     check: () => get<HealthStatus>("/health"),

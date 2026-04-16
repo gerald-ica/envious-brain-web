@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CitySearch } from "@/components/ui/city-search";
 
 // ---------------------------------------------------------------------------
 // Synastry
@@ -104,12 +105,14 @@ export default function SynastryPage() {
   // Person A
   const [dateA, setDateA] = useState("1990-06-15");
   const [timeA, setTimeA] = useState("14:30");
+  const [cityA, setCityA] = useState("New York, USA");
   const [latA, setLatA] = useState("40.7128");
   const [lonA, setLonA] = useState("-74.0060");
 
   // Person B
   const [dateB, setDateB] = useState("1992-11-08");
   const [timeB, setTimeB] = useState("09:15");
+  const [cityB, setCityB] = useState("Los Angeles, USA");
   const [latB, setLatB] = useState("34.0522");
   const [lonB, setLonB] = useState("-118.2437");
 
@@ -150,19 +153,15 @@ export default function SynastryPage() {
               value={timeA}
               onChange={(e) => setTimeA(e.target.value)}
             />
-            <Input
-              label="Latitude"
-              type="number"
-              step="0.0001"
-              value={latA}
-              onChange={(e) => setLatA(e.target.value)}
-            />
-            <Input
-              label="Longitude"
-              type="number"
-              step="0.0001"
-              value={lonA}
-              onChange={(e) => setLonA(e.target.value)}
+            <CitySearch
+              label="Birth City"
+              value={cityA}
+              onChange={(c) => {
+                setCityA(c.name);
+                setLatA(String(c.lat));
+                setLonA(String(c.lon));
+              }}
+              placeholder="Search for a city..."
             />
           </div>
         </Card>
@@ -181,19 +180,15 @@ export default function SynastryPage() {
               value={timeB}
               onChange={(e) => setTimeB(e.target.value)}
             />
-            <Input
-              label="Latitude"
-              type="number"
-              step="0.0001"
-              value={latB}
-              onChange={(e) => setLatB(e.target.value)}
-            />
-            <Input
-              label="Longitude"
-              type="number"
-              step="0.0001"
-              value={lonB}
-              onChange={(e) => setLonB(e.target.value)}
+            <CitySearch
+              label="Birth City"
+              value={cityB}
+              onChange={(c) => {
+                setCityB(c.name);
+                setLatB(String(c.lat));
+                setLonB(String(c.lon));
+              }}
+              placeholder="Search for a city..."
             />
           </div>
         </Card>
