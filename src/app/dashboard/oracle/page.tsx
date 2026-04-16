@@ -23,6 +23,8 @@ interface ChatSession {
   messages: ChatMessage[];
   createdAt: Date;
   provider: Provider;
+  /** Backend LLM session ID (from /api/v1/llm/sessions) */
+  backendSessionId?: string;
 }
 
 type Provider = "openai" | "anthropic" | "openrouter";
@@ -374,39 +376,69 @@ export default function OraclePage() {
     [activeSessionId]
   );
 
-  // -- Call Oracle API
+  // -- Call Oracle API (session-based: create session, then send message)
   const callOracleAPI = useCallback(
     async (
-      conversationHistory: { role: string; content: string }[],
-    ): Promise<string> => {
+      existingBackendId: string | undefined,
+      userText: string,
+    ): Promise<{ text: string; backendSessionId?: string }> => {
       const headers = getHeaders();
+      let backendId = existingBackendId;
 
-      const body: Record<string, unknown> = {
-        messages: conversationHistory,
-      };
-      if (birthPayload) {
-        body.context = { birth_data: birthPayload };
+      // Step 1: Create backend session if we don't have one
+      if (!backendId) {
+        const systemPrompt = birthPayload
+          ? `You are the Oracle, a 27-expert ensemble intelligence specializing in astrology, personality, and cosmic guidance. The user's birth data: date=${birthPayload.date}, time=${birthPayload.time}, lat=${birthPayload.latitude}, lon=${birthPayload.longitude}, tz=${birthPayload.timezone}. Use this to personalize every response.`
+          : "You are the Oracle, a 27-expert ensemble intelligence specializing in astrology, personality, and cosmic guidance.";
+
+        const createRes = await fetch(`${API_URL}/api/v1/llm/sessions`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ system_prompt: systemPrompt }),
+        });
+
+        if (!createRes.ok) {
+          if (createRes.status === 500) {
+            return { text: "The Oracle is being configured. Check back soon." };
+          }
+          throw new Error(`Failed to create session: ${createRes.status}`);
+        }
+
+        const createJson = await createRes.json();
+        backendId = createJson.session_id ?? createJson.data?.session_id;
+        if (!backendId) {
+          return { text: "The Oracle is being configured. Check back soon." };
+        }
       }
 
-      const res = await fetch(`${API_URL}/api/v1/oracle/chat`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`API error ${res.status}: ${errBody}`);
-      }
-
-      const json = await res.json();
-      return (
-        json.response ??
-        json.data?.response ??
-        json.message ??
-        json.content ??
-        "I was unable to generate a response. Please try again."
+      // Step 2: Send the message
+      const msgRes = await fetch(
+        `${API_URL}/api/v1/llm/sessions/${backendId}/messages`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ role: "user", content: userText }),
+        },
       );
+
+      if (!msgRes.ok) {
+        if (msgRes.status === 500) {
+          return { text: "The Oracle is being configured. Check back soon.", backendSessionId: backendId };
+        }
+        const errBody = await msgRes.text();
+        throw new Error(`API error ${msgRes.status}: ${errBody}`);
+      }
+
+      const msgJson = await msgRes.json();
+      const responseText =
+        msgJson.content ??
+        msgJson.data?.content ??
+        msgJson.response ??
+        msgJson.data?.response ??
+        msgJson.message ??
+        "I was unable to generate a response. Please try again.";
+
+      return { text: responseText, backendSessionId: backendId };
     },
     [birthPayload],
   );
@@ -470,28 +502,27 @@ export default function OraclePage() {
     setIsTyping(true);
 
     try {
-      // Build conversation history for the API (excluding welcome, just role+content)
+      // Look up the backend session ID from current state
       const currentSession = sessions.find((s) => s.id === capturedSessionId);
-      const history = [
-        ...(currentSession?.messages ?? [])
-          .filter((m) => m.role === "user" || (m.role === "assistant" && m.id !== currentSession?.messages[0]?.id))
-          .map((m) => ({ role: m.role, content: m.content })),
-        { role: "user" as const, content: text },
-      ];
-
-      const responseText = await callOracleAPI(history);
+      const result = await callOracleAPI(currentSession?.backendSessionId, text);
 
       const oracleMessage: ChatMessage = {
         id: generateId(),
         role: "assistant",
-        content: responseText,
+        content: result.text,
         timestamp: new Date(),
       };
 
       setSessions((prev) =>
         prev.map((s) =>
           s.id === capturedSessionId
-            ? { ...s, messages: [...s.messages, oracleMessage] }
+            ? {
+                ...s,
+                messages: [...s.messages, oracleMessage],
+                ...(result.backendSessionId
+                  ? { backendSessionId: result.backendSessionId }
+                  : {}),
+              }
             : s
         )
       );

@@ -130,6 +130,16 @@ export interface BirthData {
   timezone: string;
 }
 
+/** Helper: convert BirthData to the datetime payload most chart endpoints expect. */
+export function birthToDatetime(birth: BirthData) {
+  return {
+    datetime: `${birth.date}T${birth.time}:00`,
+    latitude: birth.latitude,
+    longitude: birth.longitude,
+    timezone: birth.timezone,
+  };
+}
+
 export interface ChartResponse {
   chart_type: string;
   data: Record<string, unknown>;
@@ -202,65 +212,115 @@ export const api = {
     openapi: () => get<Record<string, unknown>>("/openapi.json"),
   },
 
-  // Charts
+  // Charts — use datetime format the backend expects
   charts: {
     western: (birth: BirthData) =>
-      post<ChartResponse>("/api/v1/charts/western", birth),
+      post<ChartResponse>("/api/v1/charts/western", birthToDatetime(birth)),
     vedic: (birth: BirthData) =>
-      post<ChartResponse>("/api/v1/charts/vedic", birth),
+      post<ChartResponse>("/api/v1/charts/vedic", birthToDatetime(birth)),
     bazi: (birth: BirthData) =>
-      post<ChartResponse>("/api/v1/charts/bazi", birth),
-    synastry: (birthA: BirthData, birthB: BirthData) =>
-      post<ChartResponse>("/api/v1/charts/synastry", {
-        person_a: birthA,
-        person_b: birthB,
+      post<ChartResponse>("/api/v1/charts/bazi", {
+        datetime: `${birth.date}T${birth.time}:00`,
+        gender: "male", // TODO: add gender to profile
       }),
-    transits: (birth: BirthData) =>
-      post<TransitData[]>("/api/v1/charts/transits", birth),
-    numerology: (birth: BirthData & { name?: string }) =>
-      post<NumerologyResult>("/api/v1/charts/numerology", birth),
+    synastry: (birthA: BirthData, birthB: BirthData) =>
+      post<ChartResponse>("/api/v1/western/synastry", {
+        person1_datetime: `${birthA.date}T${birthA.time}:00`,
+        person1_latitude: birthA.latitude,
+        person1_longitude: birthA.longitude,
+        person2_datetime: `${birthB.date}T${birthB.time}:00`,
+        person2_latitude: birthB.latitude,
+        person2_longitude: birthB.longitude,
+      }),
+    transits: (natalPositions: Record<string, number>, date?: string) =>
+      post<TransitData[]>("/api/v1/transits/current", {
+        natal_positions: natalPositions,
+        ...(date ? { date } : {}),
+      }),
     humanDesign: (birth: BirthData) =>
-      post<ChartResponse>("/api/v1/charts/human-design", birth),
-    harmonics: (birth: BirthData) =>
-      post<ChartResponse>("/api/v1/charts/harmonics", birth),
+      post<ChartResponse>("/api/v1/charts/human-design", birthToDatetime(birth)),
+    harmonics: (birth: BirthData, harmonicNumber: number = 7) =>
+      post<ChartResponse>("/api/v1/western/harmonics", {
+        datetime: `${birth.date}T${birth.time}:00`,
+        latitude: birth.latitude,
+        longitude: birth.longitude,
+        harmonic_number: harmonicNumber,
+      }),
   },
 
-  // Personality
+  // Personality — use correct paths & schemas from the actual backend
   personality: {
-    mbti: (birth: BirthData) =>
-      post<PersonalityResponse>("/api/v1/personality/mbti", birth),
-    enneagram: (birth: BirthData) =>
-      post<PersonalityResponse>("/api/v1/personality/enneagram", birth),
-    archetypes: (birth: BirthData) =>
-      post<PersonalityResponse>("/api/v1/personality/archetypes", birth),
-    biorhythm: (birth: BirthData) =>
-      post<PersonalityResponse>("/api/v1/personality/biorhythm", birth),
-    synthesis: (birth: BirthData) =>
-      post<PersonalityResponse>("/api/v1/personality/synthesis", birth),
+    enneagram: () =>
+      post<PersonalityResponse>("/api/v1/personality/enneagram", {}),
+    archetypes: (data: {
+      sun_sign?: string;
+      moon_sign?: string;
+      ascendant?: string;
+      mbti?: string;
+      enneagram?: string;
+      life_path?: number;
+    }) =>
+      post<PersonalityResponse>("/api/v1/psychology/jungian-archetypes", data),
+    biorhythm: (birthDate: string, targetDate?: string) =>
+      post<PersonalityResponse>("/api/v1/personality/biorhythm", {
+        birth_date: birthDate,
+        target_date: targetDate || new Date().toISOString().split("T")[0],
+      }),
+    synthesis: (mbtiType: string, natalModifiers?: Record<string, unknown>) =>
+      post<PersonalityResponse>("/api/v1/personality/calculate", {
+        mbti_type: mbtiType,
+        ...(natalModifiers ? { natal_modifiers: natalModifiers } : {}),
+      }),
+    tarotBirthCards: (birthDate: string) =>
+      post<Record<string, unknown>>("/api/v1/personality/tarot/birth-cards", {
+        birth_date: birthDate,
+      }),
   },
 
-  // Oracle (AI Chat)
+  // Oracle (LLM Chat) — session-based
   oracle: {
-    chat: (messages: OracleMessage[], context?: Record<string, unknown>) =>
-      post<OracleChatResponse>("/api/v1/oracle/chat", { messages, context }),
+    createSession: (systemPrompt?: string) =>
+      post<{ session_id: string }>("/api/v1/llm/sessions", {
+        ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
+      }),
+    sendMessage: (sessionId: string, content: string) =>
+      post<{ role: string; content: string }>(
+        `/api/v1/llm/sessions/${sessionId}/messages`,
+        { role: "user", content },
+      ),
+    getSession: (sessionId: string) =>
+      get<Record<string, unknown>>(`/api/v1/llm/sessions/${sessionId}`),
   },
 
-  // Explore
+  // Explore — corrected paths
   explore: {
     iChing: (question?: string) =>
-      post<Record<string, unknown>>("/api/v1/explore/i-ching", { question }),
+      post<Record<string, unknown>>("/api/v1/chinese/iching/cast", { question }),
     tarot: (spread?: string) =>
-      post<Record<string, unknown>>("/api/v1/explore/tarot", { spread }),
+      post<Record<string, unknown>>("/api/v1/personality/tarot/spread", { spread }),
     fengShui: (params: Record<string, unknown>) =>
-      post<Record<string, unknown>>("/api/v1/explore/feng-shui", params),
+      post<Record<string, unknown>>("/api/v1/chinese/fengshui/chart", params),
     nineStarKi: (birth: BirthData) =>
-      post<Record<string, unknown>>("/api/v1/explore/nine-star-ki", birth),
+      post<Record<string, unknown>>("/api/v1/chinese/ninestarki/calculate", {
+        datetime: `${birth.date}T${birth.time}:00`,
+      }),
     spaceWeather: () =>
-      get<Record<string, unknown>>("/api/v1/explore/space-weather"),
-    colorPsych: (birth: BirthData) =>
-      post<Record<string, unknown>>("/api/v1/explore/color-psych", birth),
-    spiritAnimal: (birth: BirthData) =>
-      post<Record<string, unknown>>("/api/v1/explore/spirit-animal", birth),
+      get<Record<string, unknown>>("/api/v1/space-weather/current"),
+    colorPsych: (data: {
+      sun_sign: string;
+      moon_sign?: string;
+      rising_sign?: string;
+    }) =>
+      post<Record<string, unknown>>("/api/v1/psychology/color-palette", data),
+    spiritAnimal: (data: {
+      sun_sign: string;
+      moon_sign: string;
+      rising_sign: string;
+      birth_year: number;
+      birth_month: number;
+      birth_day: number;
+    }) =>
+      post<Record<string, unknown>>("/api/v1/psychology/spirit-animal", data),
   },
 
   // Developer

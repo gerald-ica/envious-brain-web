@@ -141,15 +141,7 @@ export default function DashboardPage() {
       longitude: activeProfile.lon,
       timezone: activeProfile.timezone,
     };
-
-    // Also send as separate fields for endpoints that expect them
-    const birthDataAlt = {
-      date: activeProfile.birthDate,
-      time: activeProfile.birthTime,
-      latitude: activeProfile.lat,
-      longitude: activeProfile.lon,
-      timezone: activeProfile.timezone,
-    };
+    const today = new Date().toISOString().split("T")[0];
 
     const result: DashboardData = {
       sunSign: null,
@@ -163,111 +155,137 @@ export default function DashboardPage() {
       forecast: null,
     };
 
-    // Fire all API calls in parallel
-    const [westernRes, synthesisRes, biorhythmRes, transitsRes, numerologyRes, forecastRes] =
+    let anySuccess = false;
+
+    // ---- Step 1: Fetch western chart FIRST (other endpoints need its data) ----
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let chartData: any = null;
+    let natalPositions: Record<string, number> = {};
+
+    try {
+      const westernRes = await fetch(`${API_URL}/api/v1/charts/western`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(birthPayload),
+      });
+
+      if (westernRes.ok) {
+        const json = await westernRes.json();
+        chartData = json.data ?? json;
+
+        // Extract Sun, Moon, Ascendant from positions object
+        // The backend returns positions as { Sun: { sign, degree, ... }, Moon: { ... }, ... }
+        const positions = chartData.positions ?? chartData.planets ?? {};
+
+        if (positions && typeof positions === "object" && !Array.isArray(positions)) {
+          // Object format: { Sun: { sign: "Gemini", longitude: 84.2, ... }, ... }
+          for (const [planet, data] of Object.entries(positions)) {
+            const pData = data as Record<string, unknown>;
+            const name = planet.toLowerCase();
+            if (name === "sun") result.sunSign = pData.sign as string;
+            else if (name === "moon") result.moonSign = pData.sign as string;
+
+            // Build natal longitude map for transits endpoint
+            if (typeof pData.longitude === "number") {
+              natalPositions[planet] = pData.longitude;
+            }
+          }
+        } else if (Array.isArray(positions)) {
+          // Array format: [{ planet: "Sun", sign: "Gemini", ... }, ...]
+          for (const pos of positions as NatalPosition[]) {
+            const name = (pos.planet ?? "").toLowerCase();
+            if (name === "sun") result.sunSign = pos.sign;
+            else if (name === "moon") result.moonSign = pos.sign;
+          }
+        }
+
+        // Extract Ascendant from houses (house 1 cusp sign)
+        const houses = chartData.houses;
+        if (Array.isArray(houses) && houses.length > 0) {
+          const h1 = houses.find(
+            (h: Record<string, unknown>) =>
+              h.house === 1 || h.number === 1,
+          );
+          if (h1) result.ascendant = (h1 as Record<string, unknown>).sign as string;
+        }
+        // Fallback: some responses have ascendant at top level
+        if (!result.ascendant && chartData.ascendant) {
+          result.ascendant =
+            typeof chartData.ascendant === "string"
+              ? chartData.ascendant
+              : (chartData.ascendant as Record<string, unknown>).sign as string;
+        }
+
+        anySuccess = true;
+      }
+    } catch {
+      /* western chart failed, continue */
+    }
+
+    // ---- Step 2: Fire remaining calls in parallel ----
+    // These either don't depend on chart data, or we pass what we have.
+    const [biorhythmRes, transitsRes, archetypesRes, forecastRes] =
       await Promise.allSettled([
-        // 1. Western chart
-        fetch(`${API_URL}/api/v1/charts/western`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(birthPayload),
-        }),
-        // 2. Personality synthesis
-        fetch(`${API_URL}/api/v1/personality/synthesis`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(birthPayload),
-        }),
-        // 3. Biorhythm
+        // Biorhythm — uses birth_date + target_date (correct schema)
         fetch(`${API_URL}/api/v1/personality/biorhythm`, {
           method: "POST",
           headers,
-          body: JSON.stringify(birthPayload),
-        }),
-        // 4. Transits
-        fetch(`${API_URL}/api/v1/charts/transits`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(birthPayload),
-        }),
-        // 5. Numerology
-        fetch(`${API_URL}/api/v1/charts/numerology`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ ...birthPayload, name: activeProfile.name }),
-        }),
-        // 6. Daily forecast from Oracle
-        fetch(`${API_URL}/api/v1/oracle/chat`, {
-          method: "POST",
-          headers,
           body: JSON.stringify({
-            messages: [
-              {
-                role: "user",
-                content:
-                  "Give me a brief daily forecast for today based on my current transits. Keep it to 2-3 sentences.",
-              },
-            ],
-            context: { birth_data: birthDataAlt },
+            birth_date: activeProfile.birthDate,
+            target_date: today,
           }),
         }),
+        // Transits — needs natal_positions from the western chart
+        Object.keys(natalPositions).length > 0
+          ? fetch(`${API_URL}/api/v1/transits/current`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ natal_positions: natalPositions }),
+            })
+          : Promise.reject(new Error("No natal positions available")),
+        // Jungian Archetypes — uses sun/moon/ascendant from chart
+        result.sunSign
+          ? fetch(`${API_URL}/api/v1/psychology/jungian-archetypes`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                sun_sign: result.sunSign,
+                moon_sign: result.moonSign,
+                ascendant: result.ascendant,
+              }),
+            })
+          : Promise.reject(new Error("No chart data for archetypes")),
+        // Oracle daily forecast — session-based LLM, may 500
+        (async () => {
+          const sessionRes = await fetch(`${API_URL}/api/v1/llm/sessions`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              system_prompt:
+                "You are a cosmic oracle. Give brief daily forecasts based on astrological data.",
+            }),
+          });
+          if (!sessionRes.ok) throw new Error(`LLM session: ${sessionRes.status}`);
+          const session = await sessionRes.json();
+          const sid = session.session_id ?? session.data?.session_id;
+          if (!sid) throw new Error("No session ID returned");
+
+          const msgRes = await fetch(
+            `${API_URL}/api/v1/llm/sessions/${sid}/messages`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                role: "user",
+                content:
+                  "Give me a brief daily forecast for today based on current transits. Keep it to 2-3 sentences.",
+              }),
+            },
+          );
+          if (!msgRes.ok) throw new Error(`LLM message: ${msgRes.status}`);
+          return msgRes;
+        })(),
       ]);
-
-    let anySuccess = false;
-
-    // Parse western chart
-    if (westernRes.status === "fulfilled" && westernRes.value.ok) {
-      try {
-        const json = await westernRes.value.json();
-        const d = json.data ?? json;
-        const positions: NatalPosition[] =
-          d.positions ?? d.planets ?? d.natal_positions ?? [];
-
-        for (const pos of positions) {
-          const name = (pos.planet ?? "").toLowerCase();
-          if (name === "sun") result.sunSign = pos.sign;
-          else if (name === "moon") result.moonSign = pos.sign;
-          else if (name === "ascendant" || name === "asc" || name === "rising")
-            result.ascendant = pos.sign;
-        }
-
-        // Some APIs return ascendant separately
-        if (!result.ascendant && d.ascendant) {
-          result.ascendant =
-            typeof d.ascendant === "string" ? d.ascendant : d.ascendant.sign;
-        }
-        if (!result.ascendant && d.houses) {
-          const h1 = Array.isArray(d.houses)
-            ? d.houses.find(
-                (h: Record<string, unknown>) =>
-                  h.house === 1 || h.number === 1,
-              )
-            : null;
-          if (h1) result.ascendant = h1.sign;
-        }
-
-        anySuccess = true;
-      } catch {
-        /* parse error, skip */
-      }
-    }
-
-    // Parse synthesis
-    if (synthesisRes.status === "fulfilled" && synthesisRes.value.ok) {
-      try {
-        const json = await synthesisRes.value.json();
-        const d = json.data ?? json.result ?? json;
-
-        result.mbtiType =
-          d.mbti_type ?? d.mbti ?? d.personality_type ?? null;
-        result.enneagram =
-          d.enneagram_type ?? d.enneagram ?? null;
-
-        anySuccess = true;
-      } catch {
-        /* skip */
-      }
-    }
 
     // Parse biorhythm
     if (biorhythmRes.status === "fulfilled" && biorhythmRes.value.ok) {
@@ -277,12 +295,8 @@ export default function DashboardPage() {
         const bio = d.biorhythm ?? d.cycles ?? d;
 
         result.biorhythm = {
-          physical: Math.round(
-            bio.physical?.value ?? bio.physical ?? 0,
-          ),
-          emotional: Math.round(
-            bio.emotional?.value ?? bio.emotional ?? 0,
-          ),
+          physical: Math.round(bio.physical?.value ?? bio.physical ?? 0),
+          emotional: Math.round(bio.emotional?.value ?? bio.emotional ?? 0),
           intellectual: Math.round(
             bio.intellectual?.value ?? bio.intellectual ?? 0,
           ),
@@ -297,8 +311,18 @@ export default function DashboardPage() {
     if (transitsRes.status === "fulfilled" && transitsRes.value.ok) {
       try {
         const json = await transitsRes.value.json();
-        const arr = json.data ?? json.transits ?? json;
-        if (Array.isArray(arr)) {
+        const raw = json.data ?? json.transits ?? json;
+        // Could be an object keyed by planet or an array
+        const arr = Array.isArray(raw)
+          ? raw
+          : typeof raw === "object"
+            ? Object.entries(raw).map(([planet, info]) => ({
+                planet,
+                ...(info as Record<string, unknown>),
+              }))
+            : [];
+
+        if (arr.length > 0) {
           result.transits = arr.slice(0, 6).map(
             (t: Record<string, unknown>) => ({
               planet: (t.planet as string) ?? "Unknown",
@@ -319,13 +343,18 @@ export default function DashboardPage() {
       }
     }
 
-    // Parse numerology
-    if (numerologyRes.status === "fulfilled" && numerologyRes.value.ok) {
+    // Parse archetypes — extract personality info
+    if (archetypesRes.status === "fulfilled" && archetypesRes.value.ok) {
       try {
-        const json = await numerologyRes.value.json();
+        const json = await archetypesRes.value.json();
         const d = json.data ?? json.result ?? json;
-        result.lifePathNumber =
-          d.life_path ?? d.life_path_number ?? d.lifePath ?? null;
+
+        // Try to extract personality type info from archetype response
+        result.mbtiType =
+          d.mbti_type ?? d.mbti ?? d.personality_type ?? d.primary_archetype ?? null;
+        result.enneagram =
+          d.enneagram_type ?? d.enneagram ?? null;
+
         anySuccess = true;
       } catch {
         /* skip */
@@ -333,18 +362,22 @@ export default function DashboardPage() {
     }
 
     // Parse forecast
-    if (forecastRes.status === "fulfilled" && forecastRes.value.ok) {
+    if (forecastRes.status === "fulfilled") {
       try {
-        const json = await forecastRes.value.json();
-        result.forecast =
-          json.response ??
-          json.data?.response ??
-          json.message ??
-          json.content ??
-          null;
-        anySuccess = true;
+        const res = forecastRes.value as Response;
+        if (res.ok) {
+          const json = await res.json();
+          result.forecast =
+            json.content ??
+            json.response ??
+            json.data?.content ??
+            json.data?.response ??
+            json.message ??
+            null;
+          anySuccess = true;
+        }
       } catch {
-        /* skip */
+        /* Oracle/LLM not configured — that's OK */
       }
     }
 
