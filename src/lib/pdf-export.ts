@@ -27,23 +27,39 @@ export interface ExportProgress {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
-// Constants — colors (RGB tuples)
+// Design tokens matching the reference PDF
 // ---------------------------------------------------------------------------
 
-const NAVY: [number, number, number] = [10, 14, 26];
+const NAVY: [number, number, number] = [13, 21, 37];
 const GOLD: [number, number, number] = [201, 168, 76];
-const CYAN: [number, number, number] = [0, 212, 255];
 const WHITE: [number, number, number] = [232, 230, 224];
-const MUTED: [number, number, number] = [160, 160, 160];
-const TABLE_HDR: [number, number, number] = [20, 37, 53];
-const TABLE_ALT: [number, number, number] = [17, 24, 39];
-const PURPLE: [number, number, number] = [139, 92, 246];
-const EMERALD: [number, number, number] = [16, 185, 129];
-const ROSE: [number, number, number] = [244, 63, 94];
+const MUTED: [number, number, number] = [140, 140, 155];
+const CARD_BG: [number, number, number] = [18, 28, 48];
+const TABLE_HDR: [number, number, number] = [22, 34, 56];
+const TABLE_ALT: [number, number, number] = [16, 25, 43];
+const BORDER: [number, number, number] = [40, 55, 80];
 
 // ---------------------------------------------------------------------------
-// Zodiac / medical astrology reference data
+// Astrological interpretation dictionaries
 // ---------------------------------------------------------------------------
+
+const SIGN_ELEMENT: Record<string, string> = {
+  Aries: "Fire", Taurus: "Earth", Gemini: "Air", Cancer: "Water",
+  Leo: "Fire", Virgo: "Earth", Libra: "Air", Scorpio: "Water",
+  Sagittarius: "Fire", Capricorn: "Earth", Aquarius: "Air", Pisces: "Water",
+};
+
+const SIGN_MODALITY: Record<string, string> = {
+  Aries: "Cardinal", Taurus: "Fixed", Gemini: "Mutable", Cancer: "Cardinal",
+  Leo: "Fixed", Virgo: "Mutable", Libra: "Cardinal", Scorpio: "Fixed",
+  Sagittarius: "Mutable", Capricorn: "Cardinal", Aquarius: "Fixed", Pisces: "Mutable",
+};
+
+const SIGN_RULER: Record<string, string> = {
+  Aries: "Mars", Taurus: "Venus", Gemini: "Mercury", Cancer: "Moon",
+  Leo: "Sun", Virgo: "Mercury", Libra: "Venus", Scorpio: "Pluto",
+  Sagittarius: "Jupiter", Capricorn: "Saturn", Aquarius: "Uranus", Pisces: "Neptune",
+};
 
 const SIGN_BODY: Record<string, string> = {
   Aries: "Head, face, brain, eyes",
@@ -60,66 +76,228 @@ const SIGN_BODY: Record<string, string> = {
   Pisces: "Feet, lymphatic system, immune system",
 };
 
-const SIGN_ELEMENT: Record<string, string> = {
-  Aries: "Fire", Taurus: "Earth", Gemini: "Air", Cancer: "Water",
-  Leo: "Fire", Virgo: "Earth", Libra: "Air", Scorpio: "Water",
-  Sagittarius: "Fire", Capricorn: "Earth", Aquarius: "Air", Pisces: "Water",
-};
-
-const SIGN_MODALITY: Record<string, string> = {
-  Aries: "Cardinal", Taurus: "Fixed", Gemini: "Mutable", Cancer: "Cardinal",
-  Leo: "Fixed", Virgo: "Mutable", Libra: "Cardinal", Scorpio: "Fixed",
-  Sagittarius: "Mutable", Capricorn: "Cardinal", Aquarius: "Fixed", Pisces: "Mutable",
-};
-
-const PLANET_HEALTH: Record<string, string> = {
-  Sun: "Vital force, heart, general constitution and vitality",
-  Moon: "Emotional health, digestion, fluid balance, fertility",
-  Mercury: "Nervous system, communication disorders, respiratory",
-  Venus: "Throat, kidneys, skin, hormonal balance",
-  Mars: "Energy levels, inflammation, fevers, accidents, surgery risk",
-  Jupiter: "Liver, growth, weight gain, blood sugar",
-  Saturn: "Chronic conditions, bones, teeth, joints, depression, restrictions",
-  Uranus: "Nervous tension, spasms, sudden illness, circulation",
-  Neptune: "Immune weakness, allergies, substance sensitivity, fatigue",
-  Pluto: "Regeneration, elimination, cellular health, obsessive patterns",
-};
-
-const ELEMENT_HEALTH: Record<string, { risk: string; advice: string }> = {
-  Fire: {
-    risk: "Inflammation, burnout, fevers, overexertion, heart strain",
-    advice: "Practice cooling exercises, adequate rest, anti-inflammatory diet, meditation to calm inner fire",
-  },
-  Earth: {
-    risk: "Stiffness, weight gain, sluggish metabolism, joint problems, stagnation",
-    advice: "Regular movement, stretching, lighter diet, avoid excessive comfort eating, stay hydrated",
-  },
-  Air: {
-    risk: "Anxiety, respiratory issues, nervous exhaustion, insomnia, scattered energy",
-    advice: "Grounding practices, breathwork, regular sleep schedule, reduce stimulants, nature walks",
-  },
-  Water: {
-    risk: "Fluid retention, emotional eating, depression, immune vulnerability, lymphatic congestion",
-    advice: "Dry brushing, lymphatic massage, emotional processing, boundary setting, reduce dairy and salt",
-  },
-};
-
-const HOUSE_RULER_SIGN = [
-  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
-];
-
 const SIGN_TO_MBTI: Record<string, string> = {
   Aries: "ESTP", Taurus: "ISFJ", Gemini: "ENTP", Cancer: "ISFP",
   Leo: "ENFJ", Virgo: "ISTJ", Libra: "ENFP", Scorpio: "INTJ",
   Sagittarius: "ENTP", Capricorn: "ENTJ", Aquarius: "INTP", Pisces: "INFP",
 };
 
-const PLANET_GLYPH: Record<string, string> = {
+const GLYPH: Record<string, string> = {
   Sun: "\u2609", Moon: "\u263D", Mercury: "\u263F", Venus: "\u2640",
   Mars: "\u2642", Jupiter: "\u2643", Saturn: "\u2644", Uranus: "\u2645",
   Neptune: "\u2646", Pluto: "\u2647", NorthNode: "\u260A", Chiron: "\u26B7",
+  Ascendant: "ASC",
 };
+
+const ASPECT_GLYPH: Record<string, string> = {
+  conjunction: "\u260C", opposition: "\u260D", trine: "\u25B3",
+  square: "\u25A1", sextile: "\u2731", quincunx: "Qx",
+};
+
+const HOUSE_DOMAIN: Record<number, string> = {
+  1: "self-identity, physical presence, how one meets the world",
+  2: "resources, values, material security, self-worth",
+  3: "communication, siblings, daily environment, learning",
+  4: "home, roots, inner foundation, private life",
+  5: "creativity, romance, self-expression, children, play",
+  6: "work, health, daily routines, service, craftsmanship",
+  7: "partnerships, one-on-one relationships, open enemies",
+  8: "transformation, shared resources, intimacy, regeneration",
+  9: "philosophy, higher learning, travel, worldview, publishing",
+  10: "career, public image, authority, legacy, achievement",
+  11: "community, friendships, hopes, collective purpose",
+  12: "the unconscious, hidden matters, spirituality, solitude",
+};
+
+const PLANET_IN_SIGN: Record<string, Record<string, string>> = {
+  Sun: {
+    Aries: "The identity is forged in action. There is a primal need to be first, to pioneer, to lead through sheer force of will. The self is defined by courage and initiative \u2014 an identity that must perpetually prove itself through bold action.",
+    Taurus: "The identity is rooted in permanence. There is a deep need to build, to sustain, to create lasting value. The self is defined by what endures \u2014 an identity of quiet, immovable strength that the world eventually learns to rely upon.",
+    Gemini: "The identity lives in language and ideas. There is an insatiable curiosity that processes the world through naming, categorizing, and connecting. The self multiplies \u2014 versatile, quick, perpetually young, seeing every situation from multiple angles simultaneously.",
+    Cancer: "The identity is woven into memory, emotion, and belonging. There is a primal drive to nurture, protect, and create safe harbors. The self is defined by feeling \u2014 an identity that builds its power from emotional intelligence and instinctive care.",
+    Leo: "The identity radiates. There is a fundamental need to be seen, celebrated, and to create from the heart. The self is defined by creative generosity \u2014 an identity that warms every room it enters and demands that life be lived with dramatic sincerity.",
+    Virgo: "The identity is rooted in systems, order, and creating environments where things work properly. This is not the Sun of someone who performs for the world; this is the Sun of someone who builds the infrastructure the world runs on.",
+    Libra: "The identity seeks balance, beauty, and partnership. There is a fundamental need for harmony and aesthetic order. The self is defined through relationship \u2014 an identity that comes alive in dialogue, collaboration, and the art of creating equilibrium.",
+    Scorpio: "The identity is forged in depth. There is a relentless drive to penetrate surfaces, to understand what lies beneath, to transform through confrontation with truth. The self is defined by intensity \u2014 an identity that cannot and will not settle for shallow.",
+    Sagittarius: "The identity is a quest. There is an irrepressible need for meaning, adventure, and philosophical truth. The self is defined by vision \u2014 an identity that points toward the horizon and says there is more, always more, waiting to be discovered.",
+    Capricorn: "The identity is an edifice. There is a primal need to build, to achieve, to leave a legacy. The self is defined by mastery earned through discipline \u2014 an identity that gains power over decades, like a mountain that the world eventually navigates by.",
+    Aquarius: "The identity is an innovation. There is a fundamental need to reform, to think differently, to liberate. The self is defined by originality \u2014 an identity that exists slightly ahead of its time, always seeing the system from outside.",
+    Pisces: "The identity dissolves into everything. There is a transcendent need to merge, to imagine, to feel the invisible connections between all things. The self is defined by compassion and vision \u2014 an identity permeable to the full spectrum of human experience.",
+  },
+  Moon: {
+    Aries: "Emotional reactions are fast, direct, and fierce. The inner world demands action when feelings arise \u2014 processing happens through doing. Emotional security comes from independence and the freedom to initiate.",
+    Taurus: "Emotional security is built on sensory comfort and material stability. Feelings are slow, steady, and deep. Once emotional equilibrium is established, disruption is physically uncomfortable. Loyalty in love is absolute.",
+    Gemini: "Emotions are processed through language. Talking, writing, and intellectualizing are how feelings become manageable. The inner world is restless and curious \u2014 emotional needs shift frequently, requiring variety and mental stimulation.",
+    Cancer: "The emotional world is a vast ocean \u2014 tidal, powerful, and deeply connected to memory and belonging. Nurturing others is how emotional needs are met. Home is not a place but a feeling of safety.",
+    Leo: "The emotional nature craves warmth, recognition, and creative self-expression. Feelings are big, generous, and dramatic. Emotional fulfillment comes through creating, performing, and receiving genuine appreciation.",
+    Virgo: "Emotions are processed through analysis. The inner world seeks order \u2014 when life is organized, feelings settle. Anxiety arises from chaos. Emotional care is expressed through practical service and attention to detail.",
+    Libra: "There is a deep emotional need for beauty, harmony, and partnership. Feelings are filtered through aesthetics \u2014 the quality of one's environment directly affects emotional wellbeing. Conflict feels physically destabilizing.",
+    Scorpio: "The emotional world is an underground river \u2014 powerful, invisible, and transformative. Feelings are intense, private, and absolute. Emotional processing requires depth; superficial comfort is rejected instinctively.",
+    Sagittarius: "Emotions need space, adventure, and meaning. The inner world is optimistic and philosophical \u2014 difficult feelings are processed through exploration, travel, and the search for a bigger picture.",
+    Capricorn: "Emotions are structured, controlled, and expressed with restraint. The inner world values competence and self-sufficiency. Emotional security comes from achievement and the knowledge that one can handle anything.",
+    Aquarius: "The emotional nature is detached, humanitarian, and unconventional. Feelings are processed intellectually, sometimes at the expense of intimacy. Emotional fulfillment comes through community and shared ideals.",
+    Pisces: "The emotional world has no boundaries. Feelings arrive from everywhere \u2014 other people, music, the collective unconscious. Emotional processing requires solitude, art, and spiritual practice to distinguish self from others.",
+  },
+  Mercury: {
+    Aries: "The mind is quick, combative, and direct. Ideas arrive like sparks and are spoken before they are fully formed. Thinking is decisive but impatient \u2014 the first answer is trusted more than the most refined one.",
+    Taurus: "Thinking is methodical, sensual, and persistent. Ideas take root slowly but once established are nearly immovable. The mind values practical application over abstract theory.",
+    Gemini: "Mercury in its own sign creates a mind of extraordinary speed, versatility, and linguistic dexterity. Ideas multiply endlessly. Communication is effortless. The challenge is depth \u2014 the mind can scatter across too many interests.",
+    Cancer: "Thinking is intuitive and emotionally colored. Memory is exceptional \u2014 information is stored through feeling. Communication is empathetic, sometimes defensive, always deeply personal.",
+    Leo: "The mind thinks in grand narratives. Communication is dramatic, warm, and authoritative. Ideas are presented with creative flair. The thinking style is generous but may resist contradicting opinions.",
+    Virgo: "Mercury in its own sign and exaltation creates an extraordinarily analytical mind. Precision in thought and communication approaches an art form. The capacity for detailed analysis is unmatched.",
+    Libra: "Thinking is diplomatic, balanced, and aesthetically aware. The mind naturally weighs all sides of any question. Communication is charming and fair. The challenge is decisiveness \u2014 every perspective has merit.",
+    Scorpio: "The mind is penetrating, investigative, and psychologically astute. Thinking naturally goes beneath surfaces. Communication is strategic and precise. Nothing is taken at face value.",
+    Sagittarius: "Thinking is philosophical, expansive, and vision-oriented. The mind leaps to big-picture understanding before considering details. Communication is enthusiastic and sometimes blunt.",
+    Capricorn: "The mind is structured, strategic, and practical. Thinking is organized around goals and outcomes. Communication is measured and authoritative. No word is wasted.",
+    Aquarius: "Thinking is innovative, systematic, and unconventional. The mind naturally sees patterns others miss. Communication challenges convention. Ideas arrive from the future.",
+    Pisces: "The mind operates through imagination, intuition, and symbolic thinking. Ideas arrive as visions rather than logical constructs. Communication is poetic, sometimes vague, always layered with multiple meanings.",
+  },
+  Venus: {
+    Aries: "Love is bold, direct, and competitive. Attraction is immediate and pursued without hesitation. The aesthetic sensibility values impact and dynamism over subtlety.",
+    Taurus: "Venus in its own sign creates a deep capacity for sensual pleasure, loyalty, and the appreciation of natural beauty. Love is patient, devoted, and expressed through physical comfort and material generosity.",
+    Gemini: "Love is playful, verbal, and intellectually stimulated. Attraction is sparked by wit, curiosity, and conversational brilliance. The relationship style needs constant variety and mental engagement.",
+    Cancer: "Love is nurturing, protective, and deeply sentimental. Attraction grows through emotional safety and shared vulnerability. The capacity for care is vast, though self-protection may initially hide it.",
+    Leo: "Love is dramatic, generous, and warm. Attraction is expressed through grand gestures and creative gifts. The relationship style is loyal, passionate, and needs genuine admiration to thrive.",
+    Virgo: "Love is expressed through service, attention, and practical care. Attraction grows through shared values and intellectual respect. The aesthetic sensibility values quality, refinement, and understated elegance.",
+    Libra: "Venus in its own sign creates a powerful aesthetic sense and deep need for harmonious partnership. Love is balanced, beautiful, and socially gracious. Relationships are central to personal identity.",
+    Scorpio: "Love is intense, transformative, and all-or-nothing. Attraction is magnetic and often fated-feeling. The relationship style demands absolute honesty and emotional depth. Surface connections are rejected.",
+    Sagittarius: "Love is adventurous, philosophical, and freedom-loving. Attraction is sparked by shared vision and intellectual excitement. The relationship style needs space, growth, and shared exploration.",
+    Capricorn: "Love is serious, committed, and built for the long term. Attraction grows through respect and shared ambition. The relationship style values loyalty, stability, and genuine partnership.",
+    Aquarius: "Love is unconventional, intellectually charged, and friendship-based. Attraction is sparked by originality and shared ideals. The relationship style values freedom within connection.",
+    Pisces: "Venus in its exaltation creates a boundless capacity for love, compassion, and artistic sensitivity. Love is transcendent, sometimes idealistic, always deeply felt. The capacity for devotion is extraordinary.",
+  },
+  Mars: {
+    Aries: "Mars in its own sign creates pure, undiluted drive. Energy is explosive, direct, and competitive. Action is instinctive rather than strategic. The physical vitality is exceptional.",
+    Taurus: "Energy is slow, persistent, and enormously powerful. Drive builds steadily and is nearly unstoppable once engaged. The approach to conflict is patient \u2014 outlasting rather than outfighting.",
+    Gemini: "Energy is mental, verbal, and scattered across multiple projects. Drive is intellectual \u2014 the fight is won through words, ideas, and strategic communication. Physical energy is nervous and restless.",
+    Cancer: "Energy is emotionally driven and protective. Drive is activated by threats to home, family, or emotional safety. Action is indirect and strategic rather than confrontational.",
+    Leo: "Energy is dramatic, creative, and generous. Drive is fueled by passion and the desire to create something magnificent. Action is bold, warm, and impossible to ignore.",
+    Virgo: "Energy is precise, efficient, and service-oriented. Drive is channeled through work, improvement, and the perfection of skills. The approach is methodical rather than dramatic.",
+    Libra: "Energy is relational and aesthetically motivated. Drive is activated through partnership and the pursuit of justice. Action is diplomatic but can be surprisingly decisive when fairness demands it.",
+    Scorpio: "Mars in its traditional sign creates intense, strategic, and psychologically powerful energy. Drive is all-or-nothing. Action is calculated and devastatingly effective. The will is indomitable.",
+    Sagittarius: "Energy is expansive, adventurous, and philosophically motivated. Drive is activated by vision and the desire for meaningful achievement. Action is bold, optimistic, and sometimes reckless.",
+    Capricorn: "Mars in its exaltation reaches peak expression. Ambition becomes strategic rather than impulsive. Physical and professional energy is channeled with precision. This is the general who wins wars through planning, not aggression.",
+    Aquarius: "Energy is revolutionary, systematic, and humanitarian. Drive is activated by innovation and the desire to change systems. Action is unconventional and often brilliantly disruptive.",
+    Pisces: "Energy flows like water \u2014 intuitive, adaptable, and sometimes diffuse. Drive is spiritually motivated. Action is indirect, creative, and often serves a transcendent purpose.",
+  },
+  Jupiter: {
+    Aries: "Expansion through initiative and leadership. Luck comes from boldness \u2014 the willingness to go first opens doors that remain closed for the cautious.",
+    Taurus: "Expansion through material wisdom and sensual abundance. Growth is slow but substantial. There is a natural gift for building wealth and creating lasting comfort.",
+    Gemini: "Expansion through knowledge, communication, and intellectual diversity. Learning is the path to abundance. Every connection, every conversation, becomes an opportunity.",
+    Cancer: "Jupiter in its exaltation creates enormous natural luck, optimism, and protective energy. Wisdom operates through emotional intelligence. The capacity for nurturing others becomes a source of abundance.",
+    Leo: "Expansion through creativity, generosity, and authentic self-expression. Abundance flows from the heart. There is a natural gift for inspiring others and creating joy.",
+    Virgo: "Expansion through service, skill development, and attention to detail. Growth comes from becoming genuinely excellent at something. Wisdom is practical and methodical.",
+    Libra: "Expansion through relationships, diplomacy, and aesthetic creation. Partnerships bring growth and opportunity. There is a natural gift for creating beauty and harmony.",
+    Scorpio: "Expansion through transformation, depth, and psychological understanding. Growth comes from confronting what others avoid. There is a natural gift for navigating crisis.",
+    Sagittarius: "Jupiter in its own sign creates a powerful philosophical drive and natural optimism. Expansion is limitless. The vision is grand, the faith is real, and the opportunities tend to match the ambition.",
+    Capricorn: "Jupiter in its fall must work harder for growth. Expansion comes through discipline, structure, and long-term planning. The rewards are delayed but substantial when they arrive.",
+    Aquarius: "Expansion through innovation, technology, and humanitarian vision. Growth comes from thinking differently. There is a natural gift for understanding systems and networks.",
+    Pisces: "Jupiter in its traditional sign creates a vast spiritual and creative capacity. Expansion is boundless and often invisible. The greatest growth happens in the inner world.",
+  },
+  Saturn: {
+    Aries: "Discipline is applied to identity and independence. The life lesson is about developing patience alongside courage \u2014 learning that true strength includes restraint.",
+    Taurus: "Discipline is applied to material security and values. The life lesson involves mastering relationship to resources \u2014 building genuine security through patient accumulation rather than anxiety.",
+    Gemini: "Discipline is applied to the mind and communication. The life lesson is about developing intellectual rigor and commitment to ideas \u2014 learning to speak with authority and think with precision.",
+    Cancer: "Saturn in its detriment creates tension around emotional expression and belonging. The life lesson is about developing emotional maturity \u2014 learning to be nurturing without losing structure.",
+    Leo: "Discipline is applied to creativity and self-expression. The life lesson is about developing authentic confidence \u2014 creating from genuine passion rather than performing for approval.",
+    Virgo: "Discipline in service and health creates exacting standards. The life lesson is about learning the difference between excellence and perfectionism \u2014 and choosing the former.",
+    Libra: "Saturn in its exaltation creates mastery of relationships, justice, and social architecture. The life lesson is about commitment and the weight of true partnership.",
+    Scorpio: "Discipline is applied to transformation and psychological depth. The life lesson is about facing fear directly \u2014 developing the courage to die to old selves repeatedly.",
+    Sagittarius: "Discipline is applied to philosophy and worldview. The life lesson is about developing genuine wisdom rather than collecting beliefs \u2014 building a philosophy that survives testing.",
+    Capricorn: "Saturn in its own sign creates natural authority, structural mastery, and the patience to build empires. The life lesson is about wielding power wisely and knowing that legacy matters more than speed.",
+    Aquarius: "Saturn in its traditional sign creates disciplined innovation and structured rebellion. The life lesson is about building the future systematically rather than merely dreaming about it.",
+    Pisces: "Discipline is applied to the invisible world \u2014 spirituality, imagination, and compassion. The life lesson is about giving structure to transcendence, making the spiritual practical.",
+  },
+};
+
+const PLANET_IN_HOUSE: Record<string, Record<number, string>> = {
+  Sun: {
+    1: "The identity is front and center \u2014 impossible to hide, deeply personal. Self-expression is direct and immediate. Others respond to the personality before anything else.",
+    2: "The identity is tied to values, resources, and self-worth. Building something of lasting material value is central to the sense of self.",
+    3: "The identity lives in communication, learning, and local connection. The mind and the ability to articulate are central to who this person is.",
+    4: "The Sun sits deep in the house of home, roots, inner foundation, and private life. This creates a person whose identity is rooted in creating stable, beautiful, functional environments. The greatest work may never be publicly visible.",
+    5: "The identity radiates through creative expression, romance, and play. There is a natural spotlight on artistic output and the joy of creating.",
+    6: "The identity is expressed through work, service, and daily practice. Mastery of craft IS the identity \u2014 excellence in the everyday.",
+    7: "The identity comes alive through partnership. One-on-one relationships are the crucible in which the self is forged and refined.",
+    8: "The identity is forged through transformation. Crisis, depth, and the confrontation with power are central to personal evolution.",
+    9: "The identity is a quest for meaning. Philosophy, higher education, travel, and the expansion of worldview are central to the sense of self.",
+    10: "The identity is publicly visible and career-oriented. There is a natural drive toward achievement, authority, and leaving a visible legacy.",
+    11: "The identity is expressed through community, friendship, and collective purpose. Personal fulfillment comes through contributing to something larger.",
+    12: "The identity operates behind the scenes. There is a rich inner life, spiritual depth, and creative power that may not be immediately visible to the world.",
+  },
+  Moon: {
+    1: "Emotions are visible, immediate, and central to the personality. Mood shifts are felt by everyone in the room. The need for emotional authenticity is paramount.",
+    2: "Emotional security is tied to material comfort and financial stability. Fluctuations in resources directly affect emotional wellbeing.",
+    3: "Emotions are processed through communication and intellectual engagement. Talking about feelings IS processing them.",
+    4: "The Moon in its natural house creates a profound connection to home, family, and ancestral memory. The need for a safe, beautiful living space is absolute.",
+    5: "Emotions flow into creative expression, romance, and the joy of living. Emotional fulfillment comes through creating something beautiful.",
+    6: "Emotions are processed through work and daily routine. When the routine is disrupted, emotional stability wobbles.",
+    7: "Emotional security comes through partnership. The emotional nature needs a significant other to feel complete.",
+    8: "Emotions run deep and transformative. The inner world is intense, private, and connected to powerful psychological currents.",
+    9: "Emotional needs are met through exploration, learning, and philosophical understanding. Travel and education are emotional necessities, not luxuries.",
+    10: "Emotions are publicly visible, sometimes uncomfortably so. The career and public image are emotionally charged.",
+    11: "Emotional fulfillment comes through friendship, community, and shared ideals. The inner world needs to feel part of something meaningful.",
+    12: "The emotional world is vast, hidden, and spiritually oriented. Processing happens in solitude. Intuition is powerful but may be difficult to articulate.",
+  },
+};
+
+const DECAN_RULER: Record<string, [string, string, string]> = {
+  Aries: ["Mars", "Sun", "Jupiter"], Taurus: ["Venus", "Mercury", "Saturn"],
+  Gemini: ["Mercury", "Venus", "Uranus"], Cancer: ["Moon", "Pluto", "Neptune"],
+  Leo: ["Sun", "Jupiter", "Mars"], Virgo: ["Mercury", "Saturn", "Venus"],
+  Libra: ["Venus", "Uranus", "Mercury"], Scorpio: ["Pluto", "Neptune", "Moon"],
+  Sagittarius: ["Jupiter", "Mars", "Sun"], Capricorn: ["Saturn", "Venus", "Mercury"],
+  Aquarius: ["Uranus", "Mercury", "Venus"], Pisces: ["Neptune", "Moon", "Pluto"],
+};
+
+const ELEMENT_HEALTH: Record<string, { risk: string; advice: string }> = {
+  Fire: { risk: "inflammation, burnout, fevers, overexertion, heart strain", advice: "cooling exercises, adequate rest, anti-inflammatory diet, meditation" },
+  Earth: { risk: "stiffness, weight gain, sluggish metabolism, joint problems", advice: "regular movement, stretching, lighter diet, hydration" },
+  Air: { risk: "anxiety, respiratory issues, nervous exhaustion, insomnia", advice: "grounding practices, breathwork, regular sleep schedule, nature walks" },
+  Water: { risk: "fluid retention, emotional eating, immune vulnerability, depression", advice: "dry brushing, lymphatic care, emotional processing, boundary setting" },
+};
+
+// ---------------------------------------------------------------------------
+// Poetic titles for Sun placements
+// ---------------------------------------------------------------------------
+
+function sunTitle(sign: string, house: number): string {
+  const titles: Record<string, Record<number, string>> = {
+    Aries: { 1: "The Warrior Born", 2: "The Material Pioneer", 3: "The Quick Flame", 4: "The Foundational Fire", 5: "The Creative Blaze", 6: "The Precision Strike", 7: "The Diplomatic Fighter", 8: "The Transformative Force", 9: "The Philosophical Warrior", 10: "The Ambitious Leader", 11: "The Revolutionary Spirit", 12: "The Hidden Champion" },
+    Taurus: { 1: "The Sensual Presence", 2: "The Master Builder", 3: "The Steady Voice", 4: "The Deep Root", 5: "The Aesthetic Creator", 6: "The Patient Craftsman", 7: "The Devoted Partner", 8: "The Immovable Depths", 9: "The Philosophical Gardener", 10: "The Enduring Legacy", 11: "The Communal Steward", 12: "The Silent Gardener" },
+    Gemini: { 1: "The Quicksilver Mind", 2: "The Resourceful Thinker", 3: "The Natural Communicator", 4: "The Private Communicator", 5: "The Playful Storyteller", 6: "The Analytical Craftsman", 7: "The Diplomatic Mind", 8: "The Depth Researcher", 9: "The Eternal Student", 10: "The Public Intellectual", 11: "The Network Builder", 12: "The Hidden Writer" },
+    Cancer: { 1: "The Nurturing Presence", 2: "The Emotional Banker", 3: "The Intuitive Voice", 4: "The Keeper of Hearth", 5: "The Creative Mother", 6: "The Healing Servant", 7: "The Empathic Partner", 8: "The Emotional Alchemist", 9: "The Spiritual Pilgrim", 10: "The Public Nurturer", 11: "The Community Mother", 12: "The Dream Weaver" },
+    Leo: { 1: "The Radiant One", 2: "The Generous King", 3: "The Golden Voice", 4: "The Heart of Home", 5: "The Creative Sun", 6: "The Noble Servant", 7: "The Romantic Partner", 8: "The Dramatic Transformer", 9: "The Philosophical King", 10: "The Born Leader", 11: "The Community Star", 12: "The Hidden Sun" },
+    Virgo: { 1: "The Precision Instrument", 2: "The Material Analyst", 3: "The Master Communicator", 4: "The Master Architect", 5: "The Elegant Creator", 6: "The Master Craftsman", 7: "The Discerning Partner", 8: "The Deep Analyst", 9: "The Scholarly Mind", 10: "The Organizational Genius", 11: "The Systems Thinker", 12: "The Hidden Healer" },
+    Libra: { 1: "The Beautiful Balance", 2: "The Aesthetic Investor", 3: "The Harmonious Voice", 4: "The Peaceful Home", 5: "The Artistic Heart", 6: "The Elegant Worker", 7: "The Perfect Partner", 8: "The Balanced Transformer", 9: "The Philosophical Artist", 10: "The Diplomatic Leader", 11: "The Social Architect", 12: "The Hidden Harmonizer" },
+    Scorpio: { 1: "The Magnetic Presence", 2: "The Psychological Investor", 3: "The Penetrating Mind", 4: "The Emotional Fortress", 5: "The Passionate Creator", 6: "The Transformative Worker", 7: "The Intense Partner", 8: "The Phoenix", 9: "The Truth Seeker", 10: "The Power Broker", 11: "The Revolutionary Agent", 12: "The Hidden Power" },
+    Sagittarius: { 1: "The Adventurous Soul", 2: "The Philosophical Investor", 3: "The Inspired Teacher", 4: "The Wandering Root", 5: "The Creative Visionary", 6: "The Philosophical Worker", 7: "The Freedom-Loving Partner", 8: "The Depth Explorer", 9: "The Natural Philosopher", 10: "The Visionary Leader", 11: "The Social Visionary", 12: "The Spiritual Adventurer" },
+    Capricorn: { 1: "The Mountain", 2: "The Master Accumulator", 3: "The Strategic Voice", 4: "The Foundation Builder", 5: "The Disciplined Creator", 6: "The Work Ethic", 7: "The Committed Partner", 8: "The Strategic Transformer", 9: "The Wise Elder", 10: "The Empire Builder", 11: "The Structure Maker", 12: "The Silent Authority" },
+    Aquarius: { 1: "The Original", 2: "The Innovative Investor", 3: "The Revolutionary Mind", 4: "The Unconventional Home", 5: "The Genius Creator", 6: "The Systematic Innovator", 7: "The Progressive Partner", 8: "The Technological Transformer", 9: "The Future Philosopher", 10: "The Humanitarian Leader", 11: "The Community Architect", 12: "The Hidden Revolutionary" },
+    Pisces: { 1: "The Dreamer", 2: "The Intuitive Investor", 3: "The Poetic Voice", 4: "The Spiritual Home", 5: "The Visionary Creator", 6: "The Healing Worker", 7: "The Soulful Partner", 8: "The Mystic Transformer", 9: "The Spiritual Seeker", 10: "The Compassionate Leader", 11: "The Collective Dreamer", 12: "The Transcendent Soul" },
+  };
+  return titles[sign]?.[house] || "The Cosmic Identity";
+}
+
+function moonTitle(sign: string): string {
+  const t: Record<string, string> = {
+    Aries: "The Warrior Heart", Taurus: "The Sensual Soul", Gemini: "The Curious Heart",
+    Cancer: "The Oceanic Heart", Leo: "The Radiant Heart", Virgo: "The Analytical Heart",
+    Libra: "The Aesthetic Heart", Scorpio: "The Depth Seeker", Sagittarius: "The Free Spirit",
+    Capricorn: "The Stoic Heart", Aquarius: "The Rebel Heart", Pisces: "The Mystic Heart",
+  };
+  return t[sign] || "The Emotional Core";
+}
+
+function ascTitle(sign: string): string {
+  const t: Record<string, string> = {
+    Aries: "The Fearless Face", Taurus: "The Grounded Presence", Gemini: "The Mercury Mind",
+    Cancer: "The Protective Shell", Leo: "The Magnetic Aura", Virgo: "The Refined Instrument",
+    Libra: "The Graceful Mask", Scorpio: "The Magnetic Gaze", Sagittarius: "The Open Road",
+    Capricorn: "The Quiet Authority", Aquarius: "The Unusual One", Pisces: "The Dreaming Face",
+  };
+  return t[sign] || "The Rising Persona";
+}
 
 // ---------------------------------------------------------------------------
 // Main export function
@@ -131,111 +309,193 @@ export async function generateComprehensiveReport(
 ): Promise<Blob> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const datetime = `${profile.birthDate}T${profile.birthTime || "12:00"}:00`;
-  const W = doc.internal.pageSize.getWidth(); // 210
-  const H = doc.internal.pageSize.getHeight(); // 297
-  const M = 20; // margin
-  const CW = W - 2 * M; // content width = 170
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 22;
+  const CW = W - 2 * M;
   let pageNum = 0;
+  const firstName = profile.name.split(" ")[0];
 
-  // =========================================================================
-  // Helper functions
-  // =========================================================================
+  // =======================================================================
+  // Drawing helpers matching the reference PDF style
+  // =======================================================================
 
   function darkPage() {
     doc.setFillColor(...NAVY);
     doc.rect(0, 0, W, H, "F");
   }
 
-  function addFooter() {
-    doc.setFontSize(8);
+  function pageFooter() {
+    doc.setFontSize(9);
+    doc.setFont("times", "normal");
     doc.setTextColor(...MUTED);
-    doc.text("ENVI-OUS BRAIN \u2014 Comprehensive Natal Report", M, H - 10);
-    doc.text(`Page ${pageNum}`, W - M, H - 10, { align: "right" });
+    doc.text(`\u2014 ${pageNum} \u2014`, W / 2, H - 12, { align: "center" });
+    // small gold dots in corners
+    doc.setFillColor(...GOLD);
+    doc.circle(M - 5, H - 12, 0.6, "F");
+    doc.circle(W - M + 5, H - 12, 0.6, "F");
   }
 
   function newPage() {
     doc.addPage();
     pageNum++;
     darkPage();
-    addFooter();
+    // Top gold line
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.4);
+    doc.line(M, 15, W - M, 15);
+    pageFooter();
   }
 
   function ensureSpace(y: number, needed: number): number {
-    if (y + needed > H - 30) {
-      newPage();
-      return 25;
-    }
+    if (y + needed > H - 25) { newPage(); return 25; }
     return y;
   }
 
-  function sectionTitle(y: number, text: string): number {
-    y = ensureSpace(y, 20);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
+  // Chapter title: large gold serif text (matching "I. WESTERN ASTROLOGY")
+  function chapterTitle(y: number, numeral: string, title: string, subtitle: string): number {
+    y = ensureSpace(y, 50);
+    doc.setFontSize(22);
+    doc.setFont("times", "bold");
     doc.setTextColor(...GOLD);
-    doc.text(text, M, y);
+    doc.text(`${numeral}. ${title.toUpperCase()}`, M, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("times", "italic");
+    doc.setTextColor(...MUTED);
+    doc.text(subtitle, M, y);
+    y += 5;
+    // Gold divider with end dots
     doc.setDrawColor(...GOLD);
-    doc.setLineWidth(0.5);
-    doc.line(M, y + 2, M + CW, y + 2);
-    return y + 10;
+    doc.setLineWidth(0.4);
+    doc.line(M, y, W - M, y);
+    doc.setFillColor(...GOLD);
+    doc.circle(M, y, 0.8, "F");
+    doc.circle(W - M, y, 0.8, "F");
+    return y + 12;
   }
 
-  function subTitle(y: number, text: string): number {
-    y = ensureSpace(y, 14);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...CYAN);
+  // Section heading: gold serif (matching "Dignities and Debilities")
+  function sectionHead(y: number, text: string): number {
+    y = ensureSpace(y, 20);
+    doc.setFontSize(16);
+    doc.setFont("times", "normal");
+    doc.setTextColor(...GOLD);
+    doc.text(text, M, y);
+    return y + 9;
+  }
+
+  // Planet heading: e.g. "☉ Virgo Sun at 25° in the 4th House"
+  function planetHead(y: number, text: string): number {
+    y = ensureSpace(y, 18);
+    doc.setFontSize(15);
+    doc.setFont("times", "normal");
+    doc.setTextColor(...GOLD);
+    doc.text(text, M, y);
+    return y + 8;
+  }
+
+  // Poetic italic subtitle: "The Master Architect"
+  function poeticSub(y: number, text: string): number {
+    y = ensureSpace(y, 8);
+    doc.setFontSize(10);
+    doc.setFont("times", "italic");
+    doc.setTextColor(...GOLD);
     doc.text(text, M, y);
     return y + 7;
   }
 
-  function bodyText(y: number, text: string, maxWidth?: number): number {
+  // Body text — warm white, wrapped
+  function body(y: number, text: string): number {
     if (!text) return y;
-    y = ensureSpace(y, 10);
     doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("times", "normal");
     doc.setTextColor(...WHITE);
-    const lines = doc.splitTextToSize(text, maxWidth || CW);
-    for (let i = 0; i < lines.length; i++) {
+    const lines: string[] = doc.splitTextToSize(text, CW);
+    for (const line of lines) {
       y = ensureSpace(y, 5);
-      doc.text(lines[i], M, y);
-      y += 5;
+      doc.text(line, M, y);
+      y += 4.8;
     }
-    return y + 2;
+    return y + 3;
   }
 
-  function italicText(y: number, text: string): number {
+  // Muted italic text
+  function mutedItalic(y: number, text: string): number {
     if (!text) return y;
-    y = ensureSpace(y, 10);
     doc.setFontSize(9);
-    doc.setFont("helvetica", "italic");
+    doc.setFont("times", "italic");
     doc.setTextColor(...MUTED);
-    const lines = doc.splitTextToSize(text, CW);
-    for (let i = 0; i < lines.length; i++) {
-      y = ensureSpace(y, 5);
-      doc.text(lines[i], M, y);
+    const lines: string[] = doc.splitTextToSize(text, CW);
+    for (const line of lines) {
+      y = ensureSpace(y, 4.5);
+      doc.text(line, M, y);
       y += 4.5;
     }
     return y + 2;
   }
 
-  function labelValue(y: number, label: string, value: string, x?: number): number {
-    if (!value) return y;
-    const xPos = x || M;
-    y = ensureSpace(y, 6);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...MUTED);
-    doc.text(label, xPos, y);
-    doc.setFont("helvetica", "normal");
+  // Boxed callout card with gold border (matching reference's aspect boxes)
+  function calloutBox(y: number, title: string, text: string): number {
+    const titleLines: string[] = doc.splitTextToSize(title, CW - 16);
+    const bodyLines: string[] = doc.splitTextToSize(text, CW - 16);
+    const boxH = 10 + titleLines.length * 5.5 + bodyLines.length * 4.5 + 4;
+    y = ensureSpace(y, boxH + 4);
+    // Background
+    doc.setFillColor(...CARD_BG);
+    doc.roundedRect(M, y - 3, CW, boxH, 2, 2, "F");
+    // Gold border
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(M, y - 3, CW, boxH, 2, 2, "S");
+    // Title
+    let ty = y + 4;
+    doc.setFontSize(10);
+    doc.setFont("times", "bold");
+    doc.setTextColor(...GOLD);
+    for (const line of titleLines) { doc.text(line, M + 8, ty); ty += 5.5; }
+    // Body
+    doc.setFontSize(9.5);
+    doc.setFont("times", "normal");
     doc.setTextColor(...WHITE);
-    doc.text(String(value), xPos + 42, y);
-    return y + 5.5;
+    for (const line of bodyLines) { doc.text(line, M + 8, ty); ty += 4.5; }
+    return y + boxH + 5;
   }
 
+  // Bullet point with gold arrow marker
+  function bullet(y: number, text: string): number {
+    y = ensureSpace(y, 10);
+    doc.setFontSize(10);
+    doc.setFont("times", "normal");
+    doc.setTextColor(...GOLD);
+    doc.text("\u25B8", M + 4, y);
+    doc.setTextColor(...WHITE);
+    const lines: string[] = doc.splitTextToSize(text, CW - 14);
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) y = ensureSpace(y, 4.8);
+      doc.text(lines[i], M + 10, y);
+      y += 4.8;
+    }
+    return y + 1;
+  }
+
+  // Gold divider with dots (matching reference section breaks)
+  function divider(y: number): number {
+    y = ensureSpace(y, 8);
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.3);
+    const midY = y + 2;
+    doc.line(M + 10, midY, W - M - 10, midY);
+    doc.setFillColor(...GOLD);
+    doc.circle(M + 10, midY, 0.7, "F");
+    doc.circle(W - M - 10, midY, 0.7, "F");
+    return y + 10;
+  }
+
+  // Styled table matching reference (dark header, alternating rows)
   function styledTable(y: number, headers: string[], rows: string[][]): number {
     if (!rows.length) return y;
-    y = ensureSpace(y, 20);
+    y = ensureSpace(y, 25);
     autoTable(doc, {
       startY: y,
       head: [headers],
@@ -246,38 +506,28 @@ export async function generateComprehensiveReport(
         fillColor: NAVY,
         textColor: WHITE,
         fontSize: 9,
-        cellPadding: 2.5,
-        lineWidth: 0.1,
-        lineColor: [30, 41, 59],
+        font: "times",
+        cellPadding: 3,
+        lineWidth: 0.15,
+        lineColor: BORDER,
       },
       headStyles: {
         fillColor: TABLE_HDR,
-        textColor: CYAN,
+        textColor: GOLD,
         fontStyle: "bold",
         fontSize: 9,
       },
-      alternateRowStyles: {
-        fillColor: TABLE_ALT,
-      },
-      didDrawPage: () => {
-        darkPage();
-        pageNum++;
-        addFooter();
-      },
+      alternateRowStyles: { fillColor: TABLE_ALT },
+      didDrawPage: () => { darkPage(); pageNum++; pageFooter(); },
     });
-    return ((doc as any).lastAutoTable?.finalY ?? y + 20) + 5;
+    return ((doc as any).lastAutoTable?.finalY ?? y + 20) + 6;
   }
 
-  function coloredDot(y: number, x: number, color: [number, number, number]) {
-    doc.setFillColor(...color);
-    doc.circle(x, y - 1.2, 1.5, "F");
-  }
+  // =======================================================================
+  // FETCH ALL DATA (keep existing batched approach)
+  // =======================================================================
 
-  // =========================================================================
-  // FETCH ALL DATA
-  // =========================================================================
-
-  onProgress?.({ stage: "Fetching chart data...", percent: 5 });
+  onProgress?.({ stage: "Fetching natal chart data...", percent: 5 });
 
   const post = async (url: string, body: object): Promise<any> => {
     try {
@@ -288,789 +538,565 @@ export async function generateComprehensiveReport(
       });
       if (!res.ok) return null;
       return res.json();
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   };
 
-  const birthPayload = {
-    datetime,
-    latitude: profile.lat,
-    longitude: profile.lon,
-    timezone: profile.timezone || "UTC",
-  };
-  const baziPayload = { datetime, gender: "neutral" };
+  const birthPayload = { datetime, latitude: profile.lat, longitude: profile.lon, timezone: profile.timezone || "UTC" };
 
   // Batch 1: Core charts
-  const [western, bazi, vedic, humanDesign, solarReturn, progressions] =
-    await Promise.all([
-      post("/api/v1/charts/western", birthPayload),
-      post("/api/v1/charts/bazi", baziPayload),
-      post("/api/v1/charts/vedic", birthPayload),
-      post("/api/v1/charts/human-design", birthPayload),
-      post("/api/v1/charts/solar-return", {
-        ...birthPayload,
-        target_year: new Date().getFullYear(),
-      }),
-      post("/api/v1/charts/progressions", {
-        ...birthPayload,
-        target_date: new Date().toISOString(),
-      }),
-    ]);
+  const [western, bazi, vedic, humanDesign, solarReturn, progressions] = await Promise.all([
+    post("/api/v1/charts/western", birthPayload),
+    post("/api/v1/charts/bazi", { datetime, gender: "neutral" }),
+    post("/api/v1/charts/vedic", birthPayload),
+    post("/api/v1/charts/human-design", birthPayload),
+    post("/api/v1/charts/solar-return", { ...birthPayload, target_year: new Date().getFullYear() }),
+    post("/api/v1/charts/progressions", { ...birthPayload, target_date: new Date().toISOString() }),
+  ]);
 
-  onProgress?.({ stage: "Fetching advanced analysis...", percent: 25 });
+  onProgress?.({ stage: "Analyzing planetary patterns...", percent: 25 });
 
-  // Extract key signs
-  const sunSign = western?.positions?.Sun?.sign || "Aries";
-  const moonSign = western?.positions?.Moon?.sign || "Cancer";
+  const positions = western?.positions || {};
+  const sunSign = positions.Sun?.sign || "Aries";
+  const moonSign = positions.Moon?.sign || "Cancer";
   const houses: any[] = western?.houses || [];
-  const h1 = houses.find((h: any) => h.number === 1 || h.house === 1);
+  const h1 = houses.find((h: any) => (h.number || h.house) === 1);
   const ascSign = h1?.sign || "Libra";
+  const sunDeg = Math.round(positions.Sun?.degree_in_sign ?? positions.Sun?.degree ?? 0);
+  const moonDeg = Math.round(positions.Moon?.degree_in_sign ?? positions.Moon?.degree ?? 0);
+  const ascDeg = Math.round(h1?.degree ?? 0);
+  const sunHouse = positions.Sun?.house || 1;
+  const moonHouse = positions.Moon?.house || 1;
   const mbtiType = SIGN_TO_MBTI[sunSign] || "INTJ";
 
-  // Build position maps
+  // Build maps
   const flatPositions: Record<string, number> = {};
-  const posWithSign: Record<string, { longitude: number; sign: string; degree?: number; house?: number; speed?: number; retrograde?: boolean }> = {};
-  if (western?.positions) {
-    for (const [p, d] of Object.entries(western.positions)) {
-      const pd = d as any;
-      flatPositions[p] = pd.longitude || 0;
-      posWithSign[p] = {
-        longitude: pd.longitude || 0,
-        sign: pd.sign || "",
-        degree: pd.degree_in_sign ?? pd.degree ?? 0,
-        house: pd.house,
-        speed: pd.speed,
-        retrograde: pd.retrograde || (pd.speed != null && pd.speed < 0),
-      };
-    }
+  const posMap: Record<string, { sign: string; degree: number; house: number; speed: number; retrograde: boolean; longitude: number }> = {};
+  for (const [p, d] of Object.entries(positions)) {
+    const pd = d as any;
+    flatPositions[p] = pd.longitude || 0;
+    posMap[p] = {
+      sign: pd.sign || "", degree: pd.degree_in_sign ?? pd.degree ?? 0,
+      house: pd.house || 0, speed: pd.speed || 0,
+      retrograde: pd.retrograde || (pd.speed != null && pd.speed < 0),
+      longitude: pd.longitude || 0,
+    };
   }
-
-  const dignityPlanets: Record<string, any> = {};
-  if (western?.positions) {
-    for (const [p, d] of Object.entries(western.positions)) {
-      const pd = d as any;
-      dignityPlanets[p] = {
-        sign: pd.sign,
-        degree: pd.degree_in_sign || 0,
-        house: pd.house || 1,
-        speed: pd.speed || 1,
-      };
-    }
-  }
+  const aspects: any[] = western?.aspects || [];
 
   // Batch 2: Advanced + personality
-  const [
-    northNode, chiron, fixedStars, arabicParts, harmonics,
-    enneagram, synthesis, biorhythm, archetypes, colorPalette,
-    spiritAnimal, tarotCards, convergence,
-  ] = await Promise.all([
-    post("/api/v1/western/north-node", birthPayload),
-    post("/api/v1/western/chiron", birthPayload),
+  const [fixedStars, arabicParts, enneagram, synthData, biorhythm, archetypes,
+    colorPalette, spiritAnimal, tarotCards, convergence, chiron, northNode] = await Promise.all([
     post("/api/v1/western/fixed-stars", birthPayload),
     post("/api/v1/western/arabic-parts", birthPayload),
-    post("/api/v1/western/harmonics", { ...birthPayload, harmonic_number: 7 }),
     post("/api/v1/personality/enneagram", { mbti_type: mbtiType }),
     post("/api/v1/personality/calculate", { mbti_type: mbtiType }),
-    post("/api/v1/personality/biorhythm", {
-      birth_date: profile.birthDate,
-      target_date: new Date().toISOString().split("T")[0],
-    }),
-    post("/api/v1/psychology/jungian-archetypes", {
-      sun_sign: sunSign,
-      moon_sign: moonSign,
-      ascendant: ascSign,
-    }),
-    post("/api/v1/psychology/color-palette", {
-      sun_sign: sunSign,
-      moon_sign: moonSign,
-      rising_sign: ascSign,
-    }),
-    post("/api/v1/psychology/spirit-animal", {
-      sun_sign: sunSign,
-      moon_sign: moonSign,
-      rising_sign: ascSign,
-      birth_year: parseInt(profile.birthDate.split("-")[0]),
-      birth_month: parseInt(profile.birthDate.split("-")[1]),
-      birth_day: parseInt(profile.birthDate.split("-")[2]),
-    }),
-    post("/api/v1/personality/tarot/birth-cards", {
-      birth_date: profile.birthDate,
-    }),
+    post("/api/v1/personality/biorhythm", { birth_date: profile.birthDate, target_date: new Date().toISOString().split("T")[0] }),
+    post("/api/v1/psychology/jungian-archetypes", { sun_sign: sunSign, moon_sign: moonSign, ascendant: ascSign }),
+    post("/api/v1/psychology/color-palette", { sun_sign: sunSign, moon_sign: moonSign, rising_sign: ascSign }),
+    post("/api/v1/psychology/spirit-animal", { sun_sign: sunSign, moon_sign: moonSign, rising_sign: ascSign, birth_year: parseInt(profile.birthDate.split("-")[0]), birth_month: parseInt(profile.birthDate.split("-")[1]), birth_day: parseInt(profile.birthDate.split("-")[2]) }),
+    post("/api/v1/personality/tarot/birth-cards", { birth_date: profile.birthDate }),
     post("/api/v1/personality/cosmic-convergence", birthPayload),
+    post("/api/v1/western/chiron", birthPayload),
+    post("/api/v1/western/north-node", birthPayload),
   ]);
 
-  onProgress?.({ stage: "Fetching techniques...", percent: 50 });
+  onProgress?.({ stage: "Computing techniques & synthesis...", percent: 50 });
 
-  // Batch 3: Techniques + integration + Chinese
-  const [
-    sabianSymbols, dignities, sect, profection, dynamicPersonality,
-    elementBalance, nineStarKi, fengShui, transits,
-  ] = await Promise.all([
-    post("/api/v1/techniques/sabian-symbols", {
-      planet_positions: flatPositions,
-    }),
-    post("/api/v1/techniques/dignities", {
-      chart_data: { planets: dignityPlanets },
-    }),
+  const dignityPlanets: Record<string, any> = {};
+  for (const [p, d] of Object.entries(positions)) {
+    const pd = d as any;
+    dignityPlanets[p] = { sign: pd.sign, degree: pd.degree_in_sign || 0, house: pd.house || 1, speed: pd.speed || 1 };
+  }
+
+  const [sabianSymbols, dignities, sect, profection, dynamicPersonality,
+    elementBalance, nineStarKi, fengShui, transits] = await Promise.all([
+    post("/api/v1/techniques/sabian-symbols", { planet_positions: flatPositions }),
+    post("/api/v1/techniques/dignities", { chart_data: { planets: dignityPlanets } }),
     post("/api/v1/western/hellenistic/sect", birthPayload),
-    post("/api/v1/western/hellenistic/profection", {
-      birth_year: parseInt(profile.birthDate.split("-")[0]),
-      current_year: new Date().getFullYear(),
-      asc_sign: ascSign,
-    }),
-    post("/api/v1/integration/dynamic-personality", {
-      birth_data: {
-        birth_datetime: datetime,
-        latitude: profile.lat,
-        longitude: profile.lon,
-      },
-      target_datetime: new Date().toISOString(),
-    }),
+    post("/api/v1/western/hellenistic/profection", { birth_year: parseInt(profile.birthDate.split("-")[0]), current_year: new Date().getFullYear(), asc_sign: ascSign }),
+    post("/api/v1/integration/dynamic-personality", { birth_data: { birth_datetime: datetime, latitude: profile.lat, longitude: profile.lon }, target_datetime: new Date().toISOString() }),
     post("/api/v1/integration/element-balance", birthPayload),
-    post("/api/v1/chinese/ninestarki/calculate", {
-      birth_year: parseInt(profile.birthDate.split("-")[0]),
-      birth_month: parseInt(profile.birthDate.split("-")[1]),
-    }),
-    post("/api/v1/chinese/fengshui/chart", {
-      year: parseInt(profile.birthDate.split("-")[0]),
-      facing_direction: "South",
-    }),
-    post("/api/v1/transits/current", {
-      natal_positions: Object.fromEntries(
-        Object.entries(flatPositions).map(([k, v]) => [k, { longitude: v }]),
-      ),
-    }),
+    post("/api/v1/chinese/ninestarki/calculate", { birth_year: parseInt(profile.birthDate.split("-")[0]), birth_month: parseInt(profile.birthDate.split("-")[1]) }),
+    post("/api/v1/chinese/fengshui/chart", { year: parseInt(profile.birthDate.split("-")[0]), facing_direction: "South" }),
+    post("/api/v1/transits/current", { natal_positions: Object.fromEntries(Object.entries(flatPositions).map(([k, v]) => [k, { longitude: v }])) }),
   ]);
 
-  onProgress?.({ stage: "Generating PDF...", percent: 75 });
+  onProgress?.({ stage: "Composing your natal reading...", percent: 70 });
 
-  // =========================================================================
-  // PAGE 1: COVER
-  // =========================================================================
+  // Compute element/modality counts
+  const elemCount: Record<string, number> = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
+  const modCount: Record<string, number> = { Cardinal: 0, Fixed: 0, Mutable: 0 };
+  const mainPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+  for (const p of mainPlanets) {
+    const s = posMap[p]?.sign;
+    if (s && SIGN_ELEMENT[s]) elemCount[SIGN_ELEMENT[s]]++;
+    if (s && SIGN_MODALITY[s]) modCount[SIGN_MODALITY[s]]++;
+  }
+  const domElement = Object.entries(elemCount).sort((a, b) => b[1] - a[1])[0];
+
+  // Decan helper
+  function getDecan(deg: number): number { return deg < 10 ? 1 : deg < 20 ? 2 : 3; }
+
+  // Aspect helpers
+  function getAspectsFor(planet: string): any[] {
+    return aspects.filter((a: any) =>
+      (a.planet1 === planet || a.p1 === planet || a.planet2 === planet || a.p2 === planet)
+      && Number(a.orb ?? 99) < 8
+    ).sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99));
+  }
+  function aspectName(a: any): string {
+    const type = a.aspect || a.type || "";
+    const g = ASPECT_GLYPH[type.toLowerCase()] || type;
+    const p1 = a.planet1 || a.p1 || "";
+    const p2 = a.planet2 || a.p2 || "";
+    const g1 = GLYPH[p1] || p1;
+    const g2 = GLYPH[p2] || p2;
+    const orb = Number(a.orb ?? 0).toFixed(1);
+    return `${g1} ${g} ${g2} (${orb}\u00b0)`;
+  }
+
+  // =======================================================================
+  // PAGE 1: COVER — matching reference exactly
+  // =======================================================================
   darkPage();
   pageNum = 1;
 
-  // Decorative top bar
+  // Scattered gold star dots
+  const starPositions = [
+    [35, 28], [72, 18], [140, 25], [180, 35], [55, 50], [160, 55], [25, 80],
+    [110, 42], [190, 72], [30, 120], [175, 110], [50, 170], [165, 160],
+    [80, 220], [135, 240], [45, 260], [170, 250], [90, 275], [155, 270],
+    [28, 195], [185, 195], [120, 280], [65, 140], [145, 85], [100, 55],
+  ];
   doc.setFillColor(...GOLD);
-  doc.rect(0, 0, W, 3, "F");
+  for (const [sx, sy] of starPositions) {
+    const size = 0.3 + Math.random() * 0.6;
+    doc.circle(sx, sy, size, "F");
+  }
 
-  // Title block
-  doc.setFontSize(32);
-  doc.setFont("helvetica", "bold");
+  // Name — large serif
+  doc.setFontSize(30);
+  doc.setFont("times", "bold");
   doc.setTextColor(...GOLD);
-  doc.text("ENVI-OUS BRAIN", W / 2, 70, { align: "center" });
+  doc.text(profile.name.toUpperCase(), W / 2, 105, { align: "center" });
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...WHITE);
-  doc.text("Comprehensive Natal Report", W / 2, 82, { align: "center" });
+  // Subtitle
+  doc.setFontSize(13);
+  doc.setFont("times", "normal");
+  doc.setTextColor(...MUTED);
+  doc.text("Full Multi-System Natal Reading", W / 2, 118, { align: "center" });
 
-  // Decorative line
+  // Gold line
   doc.setDrawColor(...GOLD);
-  doc.setLineWidth(0.8);
-  doc.line(W / 2 - 40, 90, W / 2 + 40, 90);
+  doc.setLineWidth(0.6);
+  doc.line(W / 2 - 45, 130, W / 2 + 45, 130);
 
-  // Profile info
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...WHITE);
-  doc.text(profile.name, W / 2, 110, { align: "center" });
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  // Birth info
+  doc.setFontSize(10.5);
+  doc.setFont("times", "normal");
   doc.setTextColor(...MUTED);
-  doc.text(
-    `Born ${profile.birthDate} at ${profile.birthTime || "12:00"}`,
-    W / 2, 120,
-    { align: "center" },
-  );
-  doc.text(
-    profile.city || `${profile.lat.toFixed(4)}, ${profile.lon.toFixed(4)}`,
-    W / 2, 127,
-    { align: "center" },
-  );
+  const birthDateFormatted = new Date(profile.birthDate + "T12:00:00").toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  doc.text(`${birthDateFormatted} \u00b7 ${profile.birthTime || "12:00"} \u00b7 ${profile.city || `${profile.lat.toFixed(2)}, ${profile.lon.toFixed(2)}`}`, W / 2, 142, { align: "center" });
 
-  // Big Three
-  const bigThreeY = 148;
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
+  // Big Three line
+  doc.setFontSize(10);
+  doc.setTextColor(...WHITE);
+  doc.text(`\u2609 ${sunSign} Sun ${sunDeg}\u00b0  \u00b7  \u263D ${moonSign} Moon ${moonDeg}\u00b0  \u00b7  ${ascSign} Rising ${ascDeg}\u00b0`, W / 2, 155, { align: "center" });
+
+  // Human Design line
+  const hdData = humanDesign?.data ?? humanDesign;
+  if (hdData?.type) {
+    doc.setTextColor(...MUTED);
+    doc.text(`Human Design: ${hdData.type}${hdData.authority ? ` \u00b7 ${hdData.authority}` : ""}`, W / 2, 164, { align: "center" });
+  }
+
+  // BaZi line
+  const baziData = bazi?.data ?? bazi;
+  const dayMaster = baziData?.day_master || baziData?.pillars?.day?.heavenly_stem;
+  if (dayMaster) {
+    doc.text(`Chinese: ${dayMaster} Day Master`, W / 2, 172, { align: "center" });
+  }
+
+  // Systems line (italic)
+  doc.setFontSize(10);
+  doc.setFont("times", "italic");
   doc.setTextColor(...GOLD);
-  doc.text("THE BIG THREE", W / 2, bigThreeY, { align: "center" });
+  doc.text("Western \u00b7 Vedic \u00b7 Numerology \u00b7 Chinese \u00b7 Human Design", W / 2, 192, { align: "center" });
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...WHITE);
-  const bigThreeText = `\u2609 Sun in ${sunSign}    \u263D Moon in ${moonSign}    \u2191 Rising ${ascSign}`;
-  doc.text(bigThreeText, W / 2, bigThreeY + 10, { align: "center" });
+  pageFooter();
 
-  // Generation date
-  doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
-  doc.text(
-    `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`,
-    W / 2, H - 30,
-    { align: "center" },
-  );
-
-  // Bottom bar
-  doc.setFillColor(...GOLD);
-  doc.rect(0, H - 3, W, 3, "F");
-
-  addFooter();
-
-  // =========================================================================
+  // =======================================================================
   // PAGE 2: TABLE OF CONTENTS
-  // =========================================================================
+  // =======================================================================
   newPage();
   let y = 30;
 
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setFont("times", "bold");
   doc.setTextColor(...GOLD);
-  doc.text("Table of Contents", W / 2, y, { align: "center" });
-  y += 15;
+  doc.text("TABLE OF CONTENTS", M, y);
+  y += 5;
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.4);
+  doc.line(M, y, W - M, y);
+  doc.setFillColor(...GOLD);
+  doc.circle(M, y, 0.8, "F");
+  doc.circle(W - M, y, 0.8, "F");
+  y += 12;
 
-  const tocItems = [
-    ["1", "Natal Chart Overview", "3"],
-    ["2", "Planetary Analysis", "5"],
-    ["3", "Essential Dignities", "7"],
-    ["4", "Fixed Stars & Arabic Parts", "8"],
-    ["5", "Health Reading", "9"],
-    ["6", "Vedic / Sidereal Analysis", "12"],
-    ["7", "BaZi Four Pillars", "13"],
-    ["8", "Personality Synthesis", "15"],
-    ["9", "Tarot & Numerology", "18"],
-    ["10", "Cosmic Timing", "19"],
-    ["11", "Sabian Symbols", "22"],
-    ["12", "Nine Star Ki & Feng Shui", "24"],
-    ["13", "Cross-System Synthesis", "25"],
-    ["", "Appendix: Disclaimer", "28"],
+  const tocEntries: [string, string, string][] = [
+    ["I", "Western Astrology", "The Tropical Chart"],
+    ["II", "Vedic Astrology (Jyotish)", "The Sidereal Perspective"],
+    ["III", "Health Reading", "The Body-Mind Map"],
+    ["IV", "Chinese Astrology (BaZi)", "The Four Pillars of Destiny"],
+    ["V", "Personality Synthesis", "The Psychological Portrait"],
+    ["VI", "Cosmic Timing", "The Current Sky"],
+    ["VII", "Cross-System Synthesis", "The Unified Portrait"],
   ];
 
-  for (const [num, title, pg] of tocItems) {
-    doc.setFontSize(11);
-    doc.setFont("helvetica", num ? "bold" : "italic");
-    doc.setTextColor(...WHITE);
-    const label = num ? `Chapter ${num}: ${title}` : title;
-    doc.text(label, M + 5, y);
+  for (const [num, title, sub] of tocEntries) {
+    // Card background
+    doc.setFillColor(...CARD_BG);
+    doc.roundedRect(M, y - 3, CW, 22, 2, 2, "F");
+    doc.setFontSize(13);
+    doc.setFont("times", "normal");
+    doc.setTextColor(...GOLD);
+    doc.text(`${num}. ${title}`, M + 8, y + 6);
+    doc.setFontSize(9.5);
+    doc.setFont("times", "italic");
     doc.setTextColor(...MUTED);
-    doc.text(pg, W - M, y, { align: "right" });
-    // Dot leader
-    doc.setDrawColor(30, 41, 59);
-    doc.setLineWidth(0.2);
-    const labelWidth = doc.getTextWidth(label);
-    const pgWidth = doc.getTextWidth(pg);
-    const dotStart = M + 5 + labelWidth + 3;
-    const dotEnd = W - M - pgWidth - 3;
-    if (dotEnd > dotStart) {
-      doc.setLineDashPattern([0.5, 2], 0);
-      doc.line(dotStart, y + 1, dotEnd, y + 1);
-      doc.setLineDashPattern([], 0);
-    }
-    y += 8;
+    doc.text(sub, M + 8, y + 14);
+    y += 28;
   }
 
-  // =========================================================================
-  // CHAPTER 1: NATAL CHART OVERVIEW
-  // =========================================================================
+  // =======================================================================
+  // CHAPTER I: WESTERN ASTROLOGY
+  // =======================================================================
   newPage();
   y = 25;
-  y = sectionTitle(y, "Chapter 1: Natal Chart Overview");
+  y = chapterTitle(y, "I", "Western Astrology", "The Tropical Chart");
 
-  // Interpretation summary
-  y = bodyText(y, `This natal chart was cast for ${profile.name}, born on ${profile.birthDate} at ${profile.birthTime || "12:00"} in ${profile.city || "the specified location"}. The Sun in ${sunSign} illuminates your core identity with ${SIGN_ELEMENT[sunSign] || "elemental"} energy, while the Moon in ${moonSign} colors your emotional landscape. With ${ascSign} rising, you present a ${SIGN_ELEMENT[ascSign] || ""} face to the world.`);
-  y += 3;
+  onProgress?.({ stage: "Writing planetary narratives...", percent: 75 });
 
-  // Planet positions table
-  y = subTitle(y, "Planetary Positions");
-  const planetOrder = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "NorthNode", "Chiron"];
-  const posRows: string[][] = [];
-  for (const planet of planetOrder) {
-    const info = posWithSign[planet];
+  // --- SUN ---
+  y = planetHead(y, `\u2609 ${sunSign} Sun at ${sunDeg}\u00b0 in the ${sunHouse}${sunHouse === 1 ? "st" : sunHouse === 2 ? "nd" : sunHouse === 3 ? "rd" : "th"} House`);
+  y = poeticSub(y, sunTitle(sunSign, sunHouse));
+
+  // Sun narrative: sign + decan + house
+  const sunInterp = PLANET_IN_SIGN.Sun?.[sunSign] || "";
+  y = body(y, `${firstName}'s Sun at ${sunDeg}\u00b0 ${sunSign} sits ${sunHouse <= 3 ? "in the angular" : sunHouse <= 6 ? "deep in the" : sunHouse <= 9 ? "in the expansive" : "at the peak of the"} ${sunHouse}${sunHouse === 1 ? "st" : sunHouse === 2 ? "nd" : sunHouse === 3 ? "rd" : "th"} House \u2014 the house of ${HOUSE_DOMAIN[sunHouse] || "life experience"}. ${sunInterp}`);
+
+  const decan = getDecan(sunDeg);
+  const decanRuler = DECAN_RULER[sunSign]?.[decan - 1] || SIGN_RULER[sunSign];
+  y = body(y, `${sunDeg}\u00b0 ${sunSign} falls in the ${decan === 1 ? "first" : decan === 2 ? "second" : "third"} decan, governed by ${decanRuler}${decanRuler !== SIGN_RULER[sunSign] ? ` through sub-rulership, adding a distinctive layer of ${SIGN_ELEMENT[Object.entries(SIGN_RULER).find(([, r]) => r === decanRuler)?.[0] || sunSign] || ""} influence` : ", reinforcing the pure expression of this sign's energy"}. This decanate colors the ${sunSign} core with ${decanRuler === "Venus" ? "aesthetic sensibility and material groundedness" : decanRuler === "Mercury" ? "intellectual sharpness and communicative flair" : decanRuler === "Mars" ? "dynamic energy and competitive drive" : decanRuler === "Jupiter" ? "philosophical breadth and optimism" : decanRuler === "Saturn" ? "structural discipline and long-term vision" : decanRuler === "Sun" ? "pure creative vitality and self-expression" : decanRuler === "Moon" ? "emotional depth and intuitive wisdom" : "innovative and unconventional energy"}.`);
+
+  const sunHouseInterp = PLANET_IN_HOUSE.Sun?.[sunHouse] || "";
+  if (sunHouseInterp) y = body(y, sunHouseInterp);
+
+  // Sun aspects
+  const sunAspects = getAspectsFor("Sun").slice(0, 4);
+  for (const a of sunAspects) {
+    const type = (a.aspect || a.type || "").toLowerCase();
+    const other = (a.planet1 === "Sun" || a.p1 === "Sun") ? (a.planet2 || a.p2) : (a.planet1 || a.p1);
+    const orb = Number(a.orb ?? 0).toFixed(1);
+    const tight = Number(a.orb) < 2;
+    const aspectTitle = `${other} ${type} Sun (${orb}\u00b0 orb)`;
+    const interp = `The ${type} between ${firstName}'s Sun and ${other} ${type === "trine" ? "creates a natural flow of energy" : type === "square" ? "creates a productive tension that demands growth" : type === "opposition" ? "creates a polarity that requires integration" : type === "conjunction" ? "fuses these energies into a single powerful force" : type === "sextile" ? "opens a channel of opportunity" : "creates a subtle but persistent dynamic"}. ${tight ? `The ${orb}\u00b0 orb makes this aspect ${Number(a.orb) < 1 ? "essentially exact \u2014 one of the defining aspects of this chart" : "highly active and personally significant"}.` : `At ${orb}\u00b0, this aspect operates as background energy \u2014 present but not dominant.`}`;
+    y = sectionHead(y, aspectTitle);
+    y = body(y, interp);
+  }
+
+  y = divider(y);
+
+  // --- MOON ---
+  y = planetHead(y, `\u263D ${moonSign} Moon at ${moonDeg}\u00b0 in the ${moonHouse}${moonHouse === 1 ? "st" : moonHouse === 2 ? "nd" : moonHouse === 3 ? "rd" : "th"} House`);
+  y = poeticSub(y, moonTitle(moonSign));
+
+  const moonInterp = PLANET_IN_SIGN.Moon?.[moonSign] || "";
+  y = body(y, `The Moon in ${moonSign} in the ${moonHouse}${moonHouse === 1 ? "st" : moonHouse === 2 ? "nd" : moonHouse === 3 ? "rd" : "th"} House of ${HOUSE_DOMAIN[moonHouse] || "experience"} creates a deep emotional need for ${SIGN_ELEMENT[moonSign] === "Fire" ? "excitement, freedom, and self-expression" : SIGN_ELEMENT[moonSign] === "Earth" ? "stability, comfort, and tangible security" : SIGN_ELEMENT[moonSign] === "Air" ? "intellectual stimulation and social connection" : "emotional depth, intimacy, and creative expression"}. ${firstName} feels most alive when ${moonHouse <= 3 ? "engaging directly with the immediate environment" : moonHouse <= 6 ? "creating, serving, or perfecting a craft" : moonHouse <= 9 ? "connecting deeply with others or exploring the unknown" : "contributing to the larger world"}. ${moonInterp}`);
+
+  const moonHouseInterp = PLANET_IN_HOUSE.Moon?.[moonHouse] || "";
+  if (moonHouseInterp) y = body(y, moonHouseInterp);
+
+  // Tightest Moon aspect as callout box
+  const moonAspects = getAspectsFor("Moon").slice(0, 3);
+  for (const a of moonAspects) {
+    const orbVal = Number(a.orb ?? 0);
+    if (orbVal > 6) continue;
+    const other = (a.planet1 === "Moon" || a.p1 === "Moon") ? (a.planet2 || a.p2) : (a.planet1 || a.p1);
+    const type = (a.aspect || a.type || "").toLowerCase();
+    const orb = orbVal.toFixed(1);
+    const tight = orbVal < 1;
+    const title = `\u2605 ${aspectName(a)} \u2014 ${tight ? "Near-Exact" : "Significant"} Aspect`;
+    const interp = `${firstName}'s Moon ${type}s ${other} at ${orb}\u00b0${tight ? " \u2014 essentially exact" : ""}. ${type === "trine" ? `This creates a natural harmony between the emotional world and ${other}'s domain. The connection is effortless and deeply personal.` : type === "square" ? `This creates a dynamic tension between emotional needs and ${other}'s energy. The friction is productive \u2014 it prevents emotional complacency.` : type === "opposition" ? `This creates a polarity between the inner emotional world and ${other}'s influence. Integration of these opposing forces is a lifelong creative project.` : type === "conjunction" ? `The emotional nature is completely fused with ${other}'s energy. The two cannot be separated \u2014 they operate as one.` : `This aspect provides a subtle but meaningful connection between emotional needs and ${other}'s energy.`}`;
+    y = calloutBox(y, title, interp);
+  }
+
+  y = divider(y);
+
+  // --- ASCENDANT ---
+  y = planetHead(y, `${ascSign} Ascendant at ${ascDeg}\u00b0`);
+  y = poeticSub(y, ascTitle(ascSign));
+
+  y = body(y, `${ascSign} Rising is ${ascSign === "Gemini" ? "the communicator, the networker, the person who walks into any room and can talk to anyone about anything. The mind is quick, curious, and perpetually hungry for new information" : ascSign === "Aries" ? "the warrior, the first to arrive and the last to back down. The physical presence is electric, direct, and impossible to ignore" : ascSign === "Taurus" ? "the grounded presence \u2014 steady, sensual, and reassuring. Others sense stability and reliability immediately" : ascSign === "Cancer" ? "the nurturer, the protective shell that hides extraordinary emotional depth" : ascSign === "Leo" ? "the spotlight \u2014 warm, magnetic, and naturally commanding attention without effort" : ascSign === "Virgo" ? "the analyst, precise, observant, and quietly competent in every situation" : ascSign === "Libra" ? "grace personified \u2014 diplomatic, beautiful, and instinctively creating harmony" : ascSign === "Scorpio" ? "intensity itself \u2014 the gaze that sees through everything, the presence that fills a room without a word" : ascSign === "Sagittarius" ? "the adventurer, expansive, optimistic, and radiating the sense that something exciting is always about to happen" : ascSign === "Capricorn" ? "quiet authority incarnate \u2014 others instinctively sense competence, responsibility, and substance" : ascSign === "Aquarius" ? "the original \u2014 slightly unusual, intellectually magnetic, and operating on a different frequency than everyone else" : "the dreamer, soft, permeable, and carrying an otherworldly quality that draws people in mysteriously"}. ${firstName} processes the world through ${SIGN_ELEMENT[ascSign] === "Air" ? "language and ideas \u2014 if it can be named, it can be understood" : SIGN_ELEMENT[ascSign] === "Fire" ? "action and initiative \u2014 experience first, reflection later" : SIGN_ELEMENT[ascSign] === "Earth" ? "the senses \u2014 what can be touched, built, and made real" : "feeling and intuition \u2014 the invisible currents beneath every interaction"}.`);
+
+  const ascDecan = getDecan(ascDeg);
+  const ascDecanRuler = DECAN_RULER[ascSign]?.[ascDecan - 1] || SIGN_RULER[ascSign];
+  y = body(y, `At ${ascDeg}\u00b0 ${ascSign}, the Ascendant falls in the ${ascDecan === 1 ? "first" : ascDecan === 2 ? "second" : "third"} decan, sub-ruled by ${ascDecanRuler}, reinforcing ${ascDecanRuler === "Uranus" ? "the technology-forward, innovative signature" : ascDecanRuler === "Mercury" ? "the intellectual and communicative qualities" : ascDecanRuler === "Venus" ? "the aesthetic and relational dimension" : `the ${ascDecanRuler} qualities`} that color this chart.`);
+
+  // ASC aspects
+  const ascAspects = aspects.filter((a: any) => {
+    const p1 = a.planet1 || a.p1 || "";
+    const p2 = a.planet2 || a.p2 || "";
+    return (p1 === "Ascendant" || p1 === "ASC" || p2 === "Ascendant" || p2 === "ASC") && Number(a.orb ?? 99) < 6;
+  }).sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99)).slice(0, 3);
+
+  for (const a of ascAspects) {
+    const other = (a.planet1 === "Ascendant" || a.planet1 === "ASC" || a.p1 === "Ascendant" || a.p1 === "ASC") ? (a.planet2 || a.p2) : (a.planet1 || a.p1);
+    const type = (a.aspect || a.type || "").toLowerCase();
+    const orb = Number(a.orb ?? 0).toFixed(1);
+    y = sectionHead(y, `ASC ${type.charAt(0).toUpperCase() + type.slice(1)} ${other} (${orb}\u00b0 orb)`);
+    y = body(y, `The Ascendant's ${type} to ${other} means ${firstName}'s outward presentation is directly ${type === "trine" || type === "sextile" ? "enhanced" : "shaped"} by ${other}'s energy. People immediately perceive ${other === "Mercury" ? "intelligence, communication, and analytical ability" : other === "Uranus" ? "innovation, unconventionality, and technological savvy" : other === "Venus" ? "charm, beauty, and aesthetic sensitivity" : other === "Mars" ? "energy, directiveness, and physical presence" : other === "Jupiter" ? "optimism, wisdom, and generous nature" : other === "Saturn" ? "maturity, discipline, and quiet authority" : other === "Neptune" ? "creativity, dreaminess, and spiritual sensitivity" : other === "Pluto" ? "intensity, depth, and transformative power" : other === "Chiron" ? "vulnerability and healing capacity" : other === "Sun" ? "vitality and identity" : other === "Moon" ? "emotional sensitivity and care" : `${other}'s qualities`} in ${firstName}.`);
+  }
+
+  y = divider(y);
+
+  // --- INNER PLANETS (Mercury, Venus, Mars) ---
+  for (const planet of ["Mercury", "Venus", "Mars"]) {
+    const info = posMap[planet];
     if (!info) continue;
-    const glyph = PLANET_GLYPH[planet] || "";
-    const retro = info.retrograde ? "R" : "";
-    posRows.push([
-      `${glyph} ${planet}`,
+    const deg = Math.round(info.degree);
+    const hse = info.house || 1;
+    const retro = info.retrograde ? " R" : "";
+    y = planetHead(y, `${GLYPH[planet] || ""} ${info.sign} ${planet} at ${deg}\u00b0${retro} in the ${hse}${hse === 1 ? "st" : hse === 2 ? "nd" : hse === 3 ? "rd" : "th"} House`);
+
+    const pInterp = PLANET_IN_SIGN[planet]?.[info.sign] || "";
+    y = body(y, `${firstName}'s ${planet} in ${info.sign} in the ${hse}${hse === 1 ? "st" : hse === 2 ? "nd" : hse === 3 ? "rd" : "th"} House of ${HOUSE_DOMAIN[hse] || "experience"} ${info.retrograde ? "is retrograde, turning its energy inward and deepening its expression. " : ""}${pInterp}`);
+
+    // Tightest aspect as callout
+    const pAspects = getAspectsFor(planet).slice(0, 1);
+    for (const a of pAspects) {
+      if (Number(a.orb) > 5) continue;
+      const other = (a.planet1 === planet || a.p1 === planet) ? (a.planet2 || a.p2) : (a.planet1 || a.p1);
+      const type = (a.aspect || a.type || "").toLowerCase();
+      const orb = Number(a.orb ?? 0).toFixed(2);
+      const tight = Number(a.orb) < 1;
+      y = calloutBox(y,
+        `\u2605 ${GLYPH[planet] || planet} ${ASPECT_GLYPH[type] || type} ${GLYPH[other] || other} (${orb}\u00b0)${tight ? " \u2014 " + (Number(a.orb) < 0.5 ? "Essentially EXACT" : "Near-Exact") : ""}`,
+        `${planet} ${type}s ${other}${tight ? " at near-exact precision" : ""}. ${type === "trine" ? `A natural gift \u2014 ${planet}'s energy flows effortlessly into ${other}'s domain.` : type === "square" ? `Productive friction \u2014 ${planet} and ${other} push each other toward growth.` : type === "opposition" ? `A polarity requiring integration \u2014 ${planet} and ${other} must learn to work as complements.` : type === "conjunction" ? `Complete fusion \u2014 ${planet} and ${other} are inseparable in ${firstName}'s experience.` : `A meaningful connection between ${planet} and ${other}.`} ${tight ? `This is one of the defining aspects of ${firstName}'s chart.` : ""}`
+      );
+    }
+    y += 2;
+  }
+
+  y = divider(y);
+
+  // --- OUTER PLANETS brief ---
+  for (const planet of ["Jupiter", "Saturn"]) {
+    const info = posMap[planet];
+    if (!info) continue;
+    const deg = Math.round(info.degree);
+    const hse = info.house || 1;
+    y = planetHead(y, `${GLYPH[planet] || ""} ${info.sign} ${planet} at ${deg}\u00b0 in the ${hse}${hse === 1 ? "st" : hse === 2 ? "nd" : hse === 3 ? "rd" : "th"} House`);
+    const interp = PLANET_IN_SIGN[planet]?.[info.sign] || "";
+    y = body(y, interp);
+  }
+
+  // Generational planets
+  for (const planet of ["Uranus", "Neptune", "Pluto"]) {
+    const info = posMap[planet];
+    if (!info) continue;
+    const deg = Math.round(info.degree);
+    const hse = info.house || 1;
+    const retro = info.retrograde ? " R" : "";
+    y = sectionHead(y, `${GLYPH[planet] || ""} ${planet} in ${info.sign} (${deg}\u00b0${retro}) \u2014 ${hse}${hse === 1 ? "st" : hse === 2 ? "nd" : hse === 3 ? "rd" : "th"} House`);
+    const interp = `${planet} in ${info.sign} in the ${hse}${hse === 1 ? "st" : hse === 2 ? "nd" : hse === 3 ? "rd" : "th"} House brings ${planet === "Uranus" ? "innovation and disruption" : planet === "Neptune" ? "dreams and spiritual sensitivity" : "transformation and regeneration"} to the domain of ${HOUSE_DOMAIN[hse] || "life experience"}.`;
+    y = body(y, interp);
+  }
+
+  y = divider(y);
+
+  // --- KEY PLANETARY PLACEMENTS TABLE ---
+  y = sectionHead(y, "Key Planetary Placements");
+  const placementRows = mainPlanets.map(p => {
+    const info = posMap[p];
+    if (!info) return [p, "-", "-", "-", "-"];
+    const retro = info.retrograde ? " R" : "";
+    return [
+      `${GLYPH[p] || ""} ${p}`,
       info.sign,
-      `${(info.degree ?? 0).toFixed(2)}\u00b0`,
-      String(info.house ?? "-"),
-      info.speed != null ? info.speed.toFixed(4) : "-",
-      retro,
-    ]);
-  }
-  y = styledTable(y, ["Planet", "Sign", "Degree", "House", "Speed", "Rx"], posRows);
+      `${info.degree.toFixed(1)}\u00b0${retro}`,
+      info.house ? `${info.house}` : "-",
+      info.sign === SIGN_RULER[info.sign] ? "Domicile" : "",
+    ];
+  }).filter(r => r[1] !== "-");
+  y = styledTable(y, ["Planet", "Sign", "Degree", "House", "Significance"], placementRows);
 
-  // Aspects table
-  const aspects: any[] = western?.aspects || [];
-  if (aspects.length > 0) {
-    y = subTitle(y, "Aspects");
-    const aspRows = aspects.slice(0, 30).map((a: any) => [
-      a.planet1 || a.p1 || "-",
-      a.aspect || a.type || "-",
-      a.planet2 || a.p2 || "-",
-      a.orb != null ? `${Number(a.orb).toFixed(2)}\u00b0` : "-",
-      a.applying != null ? (a.applying ? "Applying" : "Separating") : "-",
-    ]);
-    y = styledTable(y, ["Planet 1", "Aspect", "Planet 2", "Orb", "Status"], aspRows);
-  }
+  y = divider(y);
 
-  // House cusps
-  if (houses.length > 0) {
-    y = ensureSpace(y, 40);
-    y = subTitle(y, "House Cusps");
-    const houseRows = houses.map((h: any) => [
-      `House ${h.number || h.house || "-"}`,
-      h.sign || "-",
-      h.degree != null ? `${Number(h.degree).toFixed(2)}\u00b0` : "-",
-    ]);
-    y = styledTable(y, ["House", "Sign", "Degree"], houseRows);
+  // --- MAJOR ASPECTS — The Neural Network ---
+  y = sectionHead(y, "Major Aspects \u2014 The Neural Network");
+  y = body(y, `The aspects between planets form the neural network of the chart \u2014 the wiring that determines how energies communicate. ${firstName}'s chart features ${aspects.filter((a: any) => Number(a.orb ?? 99) < 3).length} tight aspects that define the core nature.`);
+
+  const tightAspects = aspects
+    .filter((a: any) => Number(a.orb ?? 99) < 7)
+    .sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99))
+    .slice(0, 8);
+
+  for (const a of tightAspects) {
+    const type = (a.aspect || a.type || "").toLowerCase();
+    const p1 = a.planet1 || a.p1 || "";
+    const p2 = a.planet2 || a.p2 || "";
+    const orb = Number(a.orb ?? 0).toFixed(2);
+    const isExact = Number(a.orb) < 0.5;
+    const title = `${GLYPH[p1] || p1} ${ASPECT_GLYPH[type] || type} ${GLYPH[p2] || p2} (${orb}\u00b0)`;
+    const meaning = `${p1} ${type}s ${p2}. ${isExact ? "This is essentially exact \u2014 one of the most powerful configurations in the entire chart. " : ""}${type === "trine" ? `Natural talent flows between ${p1} and ${p2}.` : type === "square" ? `Productive tension between ${p1} and ${p2} drives growth and development.` : type === "opposition" ? `A polarity axis between ${p1} and ${p2} requires conscious integration.` : type === "conjunction" ? `${p1} and ${p2} are fused into a single force.` : `${p1} and ${p2} are linked through ${type} aspect.`}`;
+    y = calloutBox(y, title, meaning);
   }
 
-  // Element & Modality distribution
-  y = ensureSpace(y, 40);
-  y = subTitle(y, "Element & Modality Distribution");
+  // --- DIGNITIES ---
+  y = divider(y);
+  y = sectionHead(y, "Dignities and Debilities");
+  y = body(y, `A planet's dignity \u2014 its strength by sign placement \u2014 dramatically affects how it expresses. ${firstName}'s chart contains:`);
 
-  const elemCount: Record<string, number> = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
-  const modCount: Record<string, number> = { Cardinal: 0, Fixed: 0, Mutable: 0 };
-  for (const planet of planetOrder) {
-    const sign = posWithSign[planet]?.sign;
-    if (sign && SIGN_ELEMENT[sign]) elemCount[SIGN_ELEMENT[sign]]++;
-    if (sign && SIGN_MODALITY[sign]) modCount[SIGN_MODALITY[sign]]++;
-  }
+  // Check for exaltations/domicile
+  const exaltations: Record<string, string> = { Sun: "Aries", Moon: "Taurus", Mercury: "Virgo", Venus: "Pisces", Mars: "Capricorn", Jupiter: "Cancer", Saturn: "Libra" };
+  const domiciles: Record<string, string[]> = { Sun: ["Leo"], Moon: ["Cancer"], Mercury: ["Gemini", "Virgo"], Venus: ["Taurus", "Libra"], Mars: ["Aries", "Scorpio"], Jupiter: ["Sagittarius", "Pisces"], Saturn: ["Capricorn", "Aquarius"], Uranus: ["Aquarius"], Neptune: ["Pisces"], Pluto: ["Scorpio"] };
 
-  const distRows = [
-    ["Fire \ud83d\udd25", String(elemCount.Fire), "Cardinal", String(modCount.Cardinal)],
-    ["Earth \ud83c\udf0d", String(elemCount.Earth), "Fixed", String(modCount.Fixed)],
-    ["Air \ud83d\udca8", String(elemCount.Air), "Mutable", String(modCount.Mutable)],
-    ["Water \ud83d\udca7", String(elemCount.Water), "", ""],
-  ];
-  y = styledTable(y, ["Element", "Count", "Modality", "Count"], distRows);
-
-  const dominantElement = Object.entries(elemCount).sort((a, b) => b[1] - a[1])[0];
-  const dominantModality = Object.entries(modCount).sort((a, b) => b[1] - a[1])[0];
-  y = bodyText(y, `Your chart is dominated by ${dominantElement[0]} energy (${dominantElement[1]} placements) and ${dominantModality[0]} mode (${dominantModality[1]} placements). This suggests a temperament that is ${dominantElement[0] === "Fire" ? "passionate and action-oriented" : dominantElement[0] === "Earth" ? "practical and grounded" : dominantElement[0] === "Air" ? "intellectual and communicative" : "intuitive and emotionally attuned"}, with a ${dominantModality[0] === "Cardinal" ? "leadership-driven, initiating" : dominantModality[0] === "Fixed" ? "persistent, determined" : "adaptable, versatile"} approach to life.`);
-
-  // =========================================================================
-  // CHAPTER 2: PLANETARY ANALYSIS
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 2: Planetary Analysis");
-
-  const planetInterpretations: Record<string, (sign: string) => string> = {
-    Sun: (s) => `Your Sun in ${s} represents your core identity and life purpose. As a ${SIGN_ELEMENT[s]} sign, your vital energy expresses through ${SIGN_ELEMENT[s] === "Fire" ? "enthusiasm, courage, and creative self-expression" : SIGN_ELEMENT[s] === "Earth" ? "practicality, stability, and material mastery" : SIGN_ELEMENT[s] === "Air" ? "intellect, communication, and social connection" : "emotion, intuition, and deep inner knowing"}. ${s} energy drives you to ${s === "Aries" ? "pioneer and lead" : s === "Taurus" ? "build and sustain" : s === "Gemini" ? "learn and communicate" : s === "Cancer" ? "nurture and protect" : s === "Leo" ? "create and inspire" : s === "Virgo" ? "analyze and serve" : s === "Libra" ? "harmonize and connect" : s === "Scorpio" ? "transform and probe depths" : s === "Sagittarius" ? "explore and philosophize" : s === "Capricorn" ? "achieve and structure" : s === "Aquarius" ? "innovate and reform" : "imagine and transcend"}.`,
-    Moon: (s) => `Your Moon in ${s} reveals your emotional nature, instinctive reactions, and deepest needs. In ${s}, you process feelings through a ${SIGN_ELEMENT[s]} lens \u2014 ${SIGN_ELEMENT[s] === "Fire" ? "you need excitement, freedom, and recognition to feel emotionally secure" : SIGN_ELEMENT[s] === "Earth" ? "you crave stability, routine, and tangible comfort for emotional wellbeing" : SIGN_ELEMENT[s] === "Air" ? "you process emotions intellectually and need mental stimulation and social variety" : "you feel deeply and need emotional intimacy, safety, and creative outlets"}. Your inner world is rich with ${s} themes.`,
-    Mercury: (s) => `Mercury in ${s} shapes how you think, communicate, and process information. In this ${SIGN_ELEMENT[s]} sign, your mental style is ${SIGN_ELEMENT[s] === "Fire" ? "quick, enthusiastic, and direct \u2014 you think on your feet and communicate with passion" : SIGN_ELEMENT[s] === "Earth" ? "methodical, practical, and thorough \u2014 you prefer concrete facts over abstract theories" : SIGN_ELEMENT[s] === "Air" ? "swift, analytical, and versatile \u2014 you excel at making connections between ideas" : "intuitive, imaginative, and empathetic \u2014 you absorb information through feeling"}.`,
-    Venus: (s) => `Venus in ${s} defines your approach to love, beauty, and values. In this placement, you are attracted to ${SIGN_ELEMENT[s] === "Fire" ? "passionate, adventurous connections and bold aesthetic choices" : SIGN_ELEMENT[s] === "Earth" ? "sensual, reliable partnerships and refined, natural beauty" : SIGN_ELEMENT[s] === "Air" ? "intellectual rapport, witty banter, and elegant aesthetics" : "deep emotional bonds, romantic gestures, and artistic expression"}. Your relationship style emphasizes ${s} qualities.`,
-    Mars: (s) => `Mars in ${s} drives your energy, ambition, and assertiveness. This placement gives you a ${SIGN_ELEMENT[s] === "Fire" ? "bold, direct, and competitive drive \u2014 you act decisively and fight for what you want" : SIGN_ELEMENT[s] === "Earth" ? "steady, persistent, and practical drive \u2014 you build toward goals with patience" : SIGN_ELEMENT[s] === "Air" ? "strategic, verbal, and socially motivated drive \u2014 you fight with ideas and words" : "emotionally fueled, subtle, and tenacious drive \u2014 your passion runs deep beneath the surface"}.`,
-    Jupiter: (s) => `Jupiter in ${s} reveals where you find growth, abundance, and meaning. This expansive planet in a ${SIGN_ELEMENT[s]} sign suggests that your greatest opportunities come through ${SIGN_ELEMENT[s] === "Fire" ? "bold ventures, leadership, and creative risk-taking" : SIGN_ELEMENT[s] === "Earth" ? "practical investments, career building, and material development" : SIGN_ELEMENT[s] === "Air" ? "education, networking, and intellectual pursuits" : "spiritual exploration, healing work, and emotional intelligence"}.`,
-    Saturn: (s) => `Saturn in ${s} shows where you face your greatest challenges and ultimately build lasting mastery. In ${s}, your life lessons center around ${SIGN_ELEMENT[s] === "Fire" ? "managing ego, developing patience, and learning to lead wisely" : SIGN_ELEMENT[s] === "Earth" ? "building real-world competence, managing resources, and accepting limitations" : SIGN_ELEMENT[s] === "Air" ? "disciplining the mind, committing to ideas, and mastering communication" : "emotional maturity, boundary-setting, and confronting fears"}. This is your path to wisdom.`,
-    Uranus: (s) => `Uranus in ${s} is a generational placement that colors how your age group approaches innovation and rebellion. In ${s}, your generation brings revolutionary energy to ${SIGN_ELEMENT[s]} domains, challenging established norms and pioneering new approaches.`,
-    Neptune: (s) => `Neptune in ${s} is a generational influence shaping collective dreams, spirituality, and illusions. Your generation's spiritual quest is filtered through ${s} energy, bringing both inspiration and potential confusion to ${SIGN_ELEMENT[s]} themes.`,
-    Pluto: (s) => `Pluto in ${s} marks a generational transformation of ${s} themes. Your age group is collectively working to transform how society relates to ${SIGN_ELEMENT[s] === "Fire" ? "power, identity, and creative expression" : SIGN_ELEMENT[s] === "Earth" ? "resources, institutions, and material structures" : SIGN_ELEMENT[s] === "Air" ? "information, communication, and social systems" : "emotional bonds, collective psychology, and spiritual evolution"}.`,
-  };
-
-  const personalPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars"];
-  const socialPlanets = ["Jupiter", "Saturn"];
-  const outerPlanets = ["Uranus", "Neptune", "Pluto"];
-
-  y = subTitle(y, "Personal Planets");
-  for (const planet of personalPlanets) {
-    const info = posWithSign[planet];
+  for (const p of mainPlanets) {
+    const info = posMap[p];
     if (!info) continue;
-    y = ensureSpace(y, 30);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PURPLE);
-    doc.text(`${PLANET_GLYPH[planet] || ""} ${planet} in ${info.sign}`, M, y);
-    y += 6;
-    if (planetInterpretations[planet]) {
-      y = bodyText(y, planetInterpretations[planet](info.sign));
+    let dignity = "";
+    if (exaltations[p] === info.sign) dignity = "Exalted";
+    else if (domiciles[p]?.includes(info.sign)) dignity = "Domicile";
+    if (dignity) {
+      y = bullet(y, `${p} in ${info.sign} (${dignity}) \u2014 ${dignity === "Exalted" ? `${p} reaches its peak expression in ${info.sign}. This is ${p}'s highest power \u2014 operating at maximum effectiveness.` : `${p} in its own sign operates with full natural authority. Comfortable, powerful, and unconstrained.`}`);
     }
-    y += 2;
   }
 
-  y = subTitle(y, "Social Planets");
-  for (const planet of socialPlanets) {
-    const info = posWithSign[planet];
-    if (!info) continue;
-    y = ensureSpace(y, 25);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PURPLE);
-    doc.text(`${PLANET_GLYPH[planet] || ""} ${planet} in ${info.sign}`, M, y);
-    y += 6;
-    if (planetInterpretations[planet]) {
-      y = bodyText(y, planetInterpretations[planet](info.sign));
-    }
-    y += 2;
-  }
-
-  y = subTitle(y, "Outer Planets (Generational)");
-  for (const planet of outerPlanets) {
-    const info = posWithSign[planet];
-    if (!info) continue;
-    y = ensureSpace(y, 20);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PURPLE);
-    doc.text(`${PLANET_GLYPH[planet] || ""} ${planet} in ${info.sign}`, M, y);
-    y += 6;
-    if (planetInterpretations[planet]) {
-      y = bodyText(y, planetInterpretations[planet](info.sign));
-    }
-    y += 2;
-  }
-
-  // North Node
-  if (northNode) {
-    y = ensureSpace(y, 30);
-    y = subTitle(y, "North Node \u2014 Karmic Purpose");
-    const nn = northNode.data ?? northNode;
-    y = bodyText(y, nn.interpretation || nn.description || `Your North Node points toward your soul's growth direction in this lifetime. The karmic lessons indicated by this placement encourage you to develop qualities you may not naturally gravitate toward, moving beyond past-life comfort zones.`);
-    if (nn.sign) y = labelValue(y, "North Node Sign:", nn.sign);
-    if (nn.house) y = labelValue(y, "North Node House:", String(nn.house));
-  }
-
-  // Chiron
-  if (chiron) {
-    y = ensureSpace(y, 30);
-    y = subTitle(y, "Chiron \u2014 The Wounded Healer");
-    const ch = chiron.data ?? chiron;
-    y = bodyText(y, ch.interpretation || ch.description || `Chiron reveals your deepest wound and your greatest capacity for healing others. This placement shows where you carry pain that ultimately becomes your source of wisdom and compassion.`);
-    if (ch.sign) y = labelValue(y, "Chiron Sign:", ch.sign);
-    if (ch.house) y = labelValue(y, "Chiron House:", String(ch.house));
-  }
-
-  // =========================================================================
-  // CHAPTER 3: ESSENTIAL DIGNITIES
-  // =========================================================================
+  // =======================================================================
+  // CHAPTER II: VEDIC ASTROLOGY
+  // =======================================================================
   newPage();
   y = 25;
-  y = sectionTitle(y, "Chapter 3: Essential Dignities");
+  y = chapterTitle(y, "II", "Vedic Astrology (Jyotish)", "The Sidereal Perspective");
 
-  y = bodyText(y, "Essential dignities reveal the strength and condition of each planet based on its sign placement. A planet in domicile or exaltation operates with ease and power, while a planet in detriment or fall must work harder to express its energy constructively.");
-  y += 3;
-
-  if (dignities) {
-    const digData = dignities.data ?? dignities;
-    const digPlanets = digData.planets || digData.dignities || digData;
-    if (typeof digPlanets === "object" && !Array.isArray(digPlanets)) {
-      const digRows: string[][] = [];
-      for (const [planet, info] of Object.entries(digPlanets)) {
-        const d = info as any;
-        digRows.push([
-          planet,
-          d.sign || "-",
-          d.dignity || d.essential_dignity || d.status || "-",
-          d.score != null ? String(d.score) : "-",
-          d.ruler || "-",
-        ]);
-      }
-      if (digRows.length > 0) {
-        y = styledTable(y, ["Planet", "Sign", "Dignity", "Score", "Ruler"], digRows);
-      }
-    } else if (Array.isArray(digPlanets)) {
-      const digRows = digPlanets.map((d: any) => [
-        d.planet || "-",
-        d.sign || "-",
-        d.dignity || d.essential_dignity || d.status || "-",
-        d.score != null ? String(d.score) : "-",
-        d.ruler || "-",
-      ]);
-      y = styledTable(y, ["Planet", "Sign", "Dignity", "Score", "Ruler"], digRows);
-    }
-  } else {
-    // Fallback: derive basic dignity from positions
-    y = bodyText(y, "Dignity data not available from the server. Based on the chart positions, your planetary placements suggest the following general conditions:");
-    const basicDig: string[][] = [];
-    for (const planet of planetOrder.slice(0, 10)) {
-      const info = posWithSign[planet];
-      if (info) {
-        basicDig.push([planet, info.sign, `${(info.degree ?? 0).toFixed(1)}\u00b0`, "-", "-"]);
-      }
-    }
-    y = styledTable(y, ["Planet", "Sign", "Degree", "Dignity", "Notes"], basicDig);
-  }
-
-  y = bodyText(y, "Planets with strong dignity (domicile, exaltation) in your chart indicate areas of natural talent and ease. Planets in weaker dignity (detriment, fall) highlight growth areas where conscious effort yields the most transformation.");
-
-  // =========================================================================
-  // CHAPTER 4: FIXED STARS & ARABIC PARTS
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 4: Fixed Stars & Arabic Parts");
-
-  // Fixed Stars
-  y = subTitle(y, "Fixed Star Conjunctions");
-  y = bodyText(y, "When natal planets align with prominent fixed stars, their energy is colored by the star's ancient mythological and astrological significance. These conjunctions add a layer of fate and destiny to your chart.");
-  y += 2;
-
-  if (fixedStars) {
-    const fsData = fixedStars.data ?? fixedStars;
-    const conj: any[] = fsData.conjunctions || fsData.fixed_stars || [];
-    if (conj.length > 0) {
-      const fsRows = conj.map((c: any) => {
-        const keywords = Array.isArray(c.star_keywords)
-          ? c.star_keywords.join(", ")
-          : c.star_keywords || c.keywords || "-";
-        return [
-          c.star || c.name || "-",
-          c.planet || "-",
-          c.orb != null ? `${Number(c.orb).toFixed(2)}\u00b0` : "-",
-          c.star_nature || c.nature || "-",
-          keywords,
-        ];
-      });
-      y = styledTable(y, ["Star", "Planet", "Orb", "Nature", "Keywords"], fsRows);
-    } else {
-      y = bodyText(y, "No significant fixed star conjunctions found within standard orb for this chart.");
-    }
-  } else {
-    y = italicText(y, "Fixed star data was not available for this chart.");
-  }
-
-  // Arabic Parts
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Arabic Parts (Lots)");
-  y = bodyText(y, "The Arabic Parts are calculated points that synthesize multiple chart factors into focused themes. They were central to medieval astrology and offer nuanced insight into specific life areas.");
-  y += 2;
-
-  if (arabicParts) {
-    const apData = arabicParts.data ?? arabicParts;
-    const parts: any[] = apData.parts || apData.lots || apData.arabic_parts || [];
-    if (Array.isArray(parts) && parts.length > 0) {
-      const apRows = parts.map((p: any) => [
-        p.name || p.part || "-",
-        p.sign || "-",
-        p.degree != null ? `${Number(p.degree).toFixed(2)}\u00b0` : "-",
-        p.house != null ? String(p.house) : "-",
-      ]);
-      y = styledTable(y, ["Part", "Sign", "Degree", "House"], apRows);
-    } else if (typeof apData === "object") {
-      const apRows: string[][] = [];
-      for (const [name, val] of Object.entries(apData)) {
-        if (typeof val === "object" && val) {
-          const v = val as any;
-          apRows.push([name, v.sign || "-", v.degree != null ? `${Number(v.degree).toFixed(2)}\u00b0` : "-", v.house != null ? String(v.house) : "-"]);
-        }
-      }
-      if (apRows.length > 0) {
-        y = styledTable(y, ["Part", "Sign", "Degree", "House"], apRows);
-      }
-    }
-  } else {
-    y = italicText(y, "Arabic Parts data was not available for this chart.");
-  }
-
-  // =========================================================================
-  // CHAPTER 5: HEALTH READING (comprehensive)
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 5: Health Reading");
-
-  y = bodyText(y, "Medical astrology provides a symbolic framework for understanding the body-mind connection through the natal chart. This analysis maps planetary energies to physical systems, identifying areas of strength and vulnerability. This is for self-awareness purposes only and is not a substitute for professional medical advice.");
-  y += 3;
-
-  // 5a. Ascendant / Constitution
-  y = subTitle(y, "General Constitution (1st House / Ascendant)");
-  y = bodyText(y, `With ${ascSign} rising, your general constitution and physical vitality are influenced by ${SIGN_ELEMENT[ascSign]} energy. The Ascendant represents your body type tendency and how your vitality manifests physically.`);
-  y = labelValue(y, "Ascendant Sign:", ascSign);
-  y = labelValue(y, "Body Zone:", SIGN_BODY[ascSign] || "General");
-  y = bodyText(y, `${ascSign} rising individuals typically have a ${ascSign === "Aries" ? "strong, athletic build with notable facial features and high energy" : ascSign === "Taurus" ? "sturdy, well-built frame with a strong neck and pleasant appearance" : ascSign === "Gemini" ? "slender, youthful appearance with expressive hands and quick movements" : ascSign === "Cancer" ? "rounded features, sensitive digestion, and fluctuating vitality tied to emotions" : ascSign === "Leo" ? "strong back, good posture, warm complexion, and robust heart energy" : ascSign === "Virgo" ? "refined features, sensitive digestive system, and detail-oriented nervous system" : ascSign === "Libra" ? "balanced proportions, kidney sensitivity, and skin that reflects inner harmony" : ascSign === "Scorpio" ? "intense presence, strong regenerative capacity, and powerful elimination system" : ascSign === "Sagittarius" ? "tall or expansive build, strong hips/thighs, and active liver" : ascSign === "Capricorn" ? "lean, structured bone system, strong teeth, but watch joints and knees" : ascSign === "Aquarius" ? "unique appearance, active circulatory system, and sensitive ankles" : "soft features, sensitive feet, strong lymphatic system, and permeable immune barriers"}.`);
-  y += 3;
-
-  // 5b. 6th House analysis
-  const h6 = houses.find((h: any) => (h.number || h.house) === 6);
-  const h6Sign = h6?.sign || HOUSE_RULER_SIGN[5] || "Virgo";
-  y = subTitle(y, "Daily Health & Habits (6th House)");
-  y = labelValue(y, "6th House Sign:", h6Sign);
-  y = labelValue(y, "Body Zone:", SIGN_BODY[h6Sign] || "Digestive system");
-  y = bodyText(y, `The 6th house governs daily health routines, susceptibility to illness, and the body's areas of functional weakness. With ${h6Sign} on your 6th house cusp, your health habits are colored by ${SIGN_ELEMENT[h6Sign]} energy. You benefit from ${SIGN_ELEMENT[h6Sign] === "Fire" ? "active exercise, competitive sports, and avoiding burnout" : SIGN_ELEMENT[h6Sign] === "Earth" ? "consistent routines, nutritious whole foods, and nature walks" : SIGN_ELEMENT[h6Sign] === "Air" ? "varied exercise, social health activities, and breathing exercises" : "swimming, emotional self-care, and adequate rest near water"}.`);
-
-  // Planets in 6th house
-  const planetsIn6: string[] = [];
-  for (const [p, info] of Object.entries(posWithSign)) {
-    if (info.house === 6) planetsIn6.push(p);
-  }
-  if (planetsIn6.length > 0) {
-    y = bodyText(y, `Planets in your 6th house: ${planetsIn6.join(", ")}. Each planet adds its own health dimension:`);
-    for (const p of planetsIn6) {
-      if (PLANET_HEALTH[p]) {
-        y = labelValue(y, `  ${p}:`, PLANET_HEALTH[p]);
-      }
-    }
-  } else {
-    y = bodyText(y, "No planets reside in your 6th house, suggesting that health matters are primarily indicated by the sign on the cusp and its ruling planet rather than direct planetary influence.");
-  }
-  y += 3;
-
-  // 5c. Key planetary health indicators
-  y = subTitle(y, "Planetary Health Indicators");
-  const healthPlanets = ["Sun", "Moon", "Mars", "Saturn"];
-  const healthRows: string[][] = [];
-  for (const planet of healthPlanets) {
-    const info = posWithSign[planet];
-    if (info) {
-      healthRows.push([
-        `${PLANET_GLYPH[planet] || ""} ${planet}`,
-        info.sign,
-        SIGN_BODY[info.sign] || "-",
-        PLANET_HEALTH[planet] || "-",
-      ]);
-    }
-  }
-  y = styledTable(y, ["Planet", "Sign", "Body Zone", "Health Theme"], healthRows);
-
-  y = bodyText(y, `Your Sun in ${sunSign} concentrates vital force in the ${SIGN_BODY[sunSign]?.toLowerCase() || "body"} area. The Moon in ${moonSign} influences your emotional health and ${SIGN_BODY[moonSign]?.toLowerCase() || "digestive"} function. Mars in ${posWithSign.Mars?.sign || "unknown"} directs your physical energy and indicates where inflammation or injury may occur. Saturn in ${posWithSign.Saturn?.sign || "unknown"} shows where chronic conditions may develop over time.`);
-  y += 3;
-
-  // 5d. 8th and 12th house
-  const h8 = houses.find((h: any) => (h.number || h.house) === 8);
-  const h12 = houses.find((h: any) => (h.number || h.house) === 12);
-  const h8Sign = h8?.sign || HOUSE_RULER_SIGN[7] || "Scorpio";
-  const h12Sign = h12?.sign || HOUSE_RULER_SIGN[11] || "Pisces";
-
-  y = subTitle(y, "Regeneration & Hidden Health");
-  y = labelValue(y, "8th House (Regeneration):", `${h8Sign} \u2014 ${SIGN_BODY[h8Sign] || ""}`);
-  y = bodyText(y, `The 8th house governs regeneration, surgery, and crisis health events. With ${h8Sign} here, your body's healing capacity is connected to ${SIGN_ELEMENT[h8Sign]} processes.`);
-  y = labelValue(y, "12th House (Hidden Issues):", `${h12Sign} \u2014 ${SIGN_BODY[h12Sign] || ""}`);
-  y = bodyText(y, `The 12th house reveals hidden or chronic health patterns that may be difficult to diagnose. ${h12Sign} energy here suggests paying attention to ${SIGN_BODY[h12Sign]?.toLowerCase() || "subtle health"} concerns, especially during periods of stress or isolation.`);
-  y += 3;
-
-  // 5e. Element balance health analysis
-  y = subTitle(y, "Element Balance & Health");
-  const elemHealthRows: string[][] = [];
-  for (const elem of ["Fire", "Earth", "Air", "Water"]) {
-    const count = elemCount[elem] || 0;
-    const status = count >= 4 ? "Dominant" : count >= 2 ? "Balanced" : count === 1 ? "Weak" : "Absent";
-    elemHealthRows.push([
-      elem,
-      String(count),
-      status,
-      ELEMENT_HEALTH[elem]?.risk || "-",
-    ]);
-  }
-  y = styledTable(y, ["Element", "Planets", "Status", "Health Risks"], elemHealthRows);
-
-  // Dominant element health advice
-  if (dominantElement) {
-    const healthInfo = ELEMENT_HEALTH[dominantElement[0]];
-    if (healthInfo) {
-      y = bodyText(y, `With ${dominantElement[0]} as your dominant element (${dominantElement[1]} placements), you should be aware of: ${healthInfo.risk}.`);
-      y = bodyText(y, `Recommendations: ${healthInfo.advice}.`);
-    }
-  }
-
-  // Weak element health advice
-  const weakElements = Object.entries(elemCount).filter(([, c]) => c === 0 || c === 1);
-  if (weakElements.length > 0) {
-    y = bodyText(y, `You have ${weakElements.map(([e, c]) => `${c === 0 ? "no" : "only one"} ${e}`).join(" and ")} placement${weakElements.length > 1 ? "s" : ""}. Deficiency in ${weakElements.map(([e]) => e).join("/")} may manifest as ${weakElements.map(([e]) => ELEMENT_HEALTH[e]?.risk.split(",")[0] || e + " imbalance").join("; ")}. Consider actively cultivating these elements through lifestyle choices.`);
-  }
-  y += 3;
-
-  // 5f. Biorhythm current state
-  if (biorhythm) {
-    y = subTitle(y, "Current Biorhythm State");
-    const bio = biorhythm.data ?? biorhythm;
-    const cycles = bio.cycles || bio;
-    y = labelValue(y, "Physical:", `${cycles.physical != null ? `${Math.round(Number(cycles.physical))}%` : "N/A"}`);
-    y = labelValue(y, "Emotional:", `${cycles.emotional != null ? `${Math.round(Number(cycles.emotional))}%` : "N/A"}`);
-    y = labelValue(y, "Intellectual:", `${cycles.intellectual != null ? `${Math.round(Number(cycles.intellectual))}%` : "N/A"}`);
-
-    const phys = Number(cycles.physical || 0);
-    const emot = Number(cycles.emotional || 0);
-    const intel = Number(cycles.intellectual || 0);
-    y = bodyText(y, `Your current biorhythm shows ${phys > 60 ? "high physical energy \u2014 a good time for exercise and physical challenges" : phys > 30 ? "moderate physical energy \u2014 maintain regular activity" : "low physical energy \u2014 prioritize rest and recovery"}. Emotionally, you are ${emot > 60 ? "in a peak period, feeling emotionally resilient and expressive" : emot > 30 ? "in a balanced emotional state" : "in a low emotional phase \u2014 practice extra self-care and avoid major emotional decisions"}. Intellectually, ${intel > 60 ? "your mind is sharp and receptive \u2014 ideal for study and complex work" : intel > 30 ? "mental energy is stable and functional" : "focus may be lower than usual \u2014 break tasks into smaller steps"}.`);
-  }
-
-  // 5g. Personalized recommendations
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Personalized Health Recommendations");
-  y = bodyText(y, `Based on your complete chart analysis, here are tailored health recommendations for ${profile.name}:`);
-  y += 2;
-
-  const recommendations = [
-    `1. Primary Focus Area: ${SIGN_BODY[h6Sign] || "general wellness"} (6th house in ${h6Sign}). Establish consistent daily routines that support this body system.`,
-    `2. Vital Energy: Your ${sunSign} Sun suggests focusing on ${SIGN_BODY[sunSign]?.toLowerCase() || "overall vitality"}. ${SIGN_ELEMENT[sunSign] === "Fire" ? "Avoid overexertion and burnout" : SIGN_ELEMENT[sunSign] === "Earth" ? "Maintain physical activity to avoid stagnation" : SIGN_ELEMENT[sunSign] === "Air" ? "Ground yourself with body-based practices" : "Honor emotional needs to maintain physical health"}.`,
-    `3. Emotional Wellness: With Moon in ${moonSign}, ${SIGN_ELEMENT[moonSign] === "Water" ? "journaling, therapy, and creative outlets support emotional processing" : SIGN_ELEMENT[moonSign] === "Fire" ? "physical activity and adventure keep emotions flowing" : SIGN_ELEMENT[moonSign] === "Earth" ? "nature, cooking, and sensory pleasures restore balance" : "social connection and intellectual stimulation lift mood"}.`,
-    `4. Exercise Style: ${SIGN_ELEMENT[ascSign] === "Fire" ? "High-intensity, competitive sports, martial arts" : SIGN_ELEMENT[ascSign] === "Earth" ? "Hiking, yoga, weight training, gardening" : SIGN_ELEMENT[ascSign] === "Air" ? "Dance, cycling, tennis, group fitness" : "Swimming, tai chi, gentle yoga, water activities"} suit your ${ascSign} rising constitution.`,
-    `5. Chronic Awareness: Saturn in ${posWithSign.Saturn?.sign || "your chart"} suggests monitoring ${SIGN_BODY[posWithSign.Saturn?.sign || "Capricorn"]?.toLowerCase() || "bones and joints"} over time. Preventive care in this area pays dividends.`,
-  ];
-  for (const rec of recommendations) {
-    y = bodyText(y, rec);
-  }
-
-  y = italicText(y, "Disclaimer: This health reading is based on astrological symbolism and is intended for self-reflection and personal insight only. It is not medical advice. Always consult qualified healthcare professionals for health concerns.");
-
-  // =========================================================================
-  // CHAPTER 6: VEDIC / SIDEREAL ANALYSIS
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 6: Vedic / Sidereal Analysis");
+  onProgress?.({ stage: "Writing Vedic analysis...", percent: 80 });
 
   if (vedic) {
     const vData = vedic.data ?? vedic;
-    y = bodyText(y, "Vedic (Jyotish) astrology uses the sidereal zodiac, which accounts for the precession of the equinoxes. This places planets approximately 23-24 degrees earlier than their tropical (Western) positions, often resulting in different sign placements that reveal complementary facets of your cosmic blueprint.");
-    y += 3;
+    const vPositions = vData.positions || vData.planets || {};
+    const vSun = vPositions.Sun || vPositions.sun;
+    const vMoon = vPositions.Moon || vPositions.moon;
+    const vSunSign = (vSun as any)?.sign || (vSun as any)?.rashi;
+    const vMoonSign = (vMoon as any)?.sign || (vMoon as any)?.rashi;
+    const nakshatra = (vMoon as any)?.nakshatra;
+    const pada = (vMoon as any)?.pada;
+
+    y = planetHead(y, `${vSunSign || sunSign} Sun \u00b7 ${vMoonSign || moonSign} Moon${nakshatra ? ` \u00b7 ${nakshatra} Nakshatra` : ""}`);
+
+    y = body(y, `In the sidereal zodiac \u2014 which accounts for the precession of the equinoxes and shifts all placements approximately 23\u00b0 backward from tropical positions \u2014 ${firstName}'s chart reveals ${vSunSign === vMoonSign ? `a powerful double ${vSunSign} configuration, intensifying every quality of this sign` : `a ${vSunSign || "sidereal"} Sun and ${vMoonSign || "sidereal"} Moon combination that adds depth to the tropical reading`}.`);
+
+    if (Object.keys(vPositions).length > 0) {
+      y = sectionHead(y, "Sidereal Positions");
+      const vRows: string[][] = [];
+      for (const [planet, info] of Object.entries(vPositions)) {
+        const pd = info as any;
+        vRows.push([planet, pd.sign || pd.rashi || "-", pd.degree != null ? `${Number(pd.degree).toFixed(1)}\u00b0` : "-", pd.nakshatra || "-"]);
+      }
+      y = styledTable(y, ["Planet", "Rashi", "Degree", "Nakshatra"], vRows);
+    }
+
+    if (nakshatra) {
+      y = sectionHead(y, `${nakshatra} Nakshatra`);
+      y = body(y, `${firstName}'s Moon nakshatra \u2014 the lunar mansion \u2014 is ${nakshatra}${pada ? ` (Pada ${pada})` : ""}. In Vedic astrology, the Moon's nakshatra is one of the most important indicators of personality, emotional temperament, and destiny.`);
+    }
 
     if (vData.ayanamsa != null) {
-      y = labelValue(y, "Ayanamsa:", `${Number(vData.ayanamsa).toFixed(4)}\u00b0`);
-    }
-
-    // Sidereal positions
-    const sPositions = vData.positions || vData.planets || {};
-    if (Object.keys(sPositions).length > 0) {
-      y = subTitle(y, "Sidereal Planetary Positions");
-      const vedRows: string[][] = [];
-      for (const [planet, info] of Object.entries(sPositions)) {
-        const pd = info as any;
-        vedRows.push([
-          planet,
-          pd.sign || pd.rashi || "-",
-          pd.degree != null ? `${Number(pd.degree).toFixed(2)}\u00b0` : pd.longitude != null ? `${Number(pd.longitude).toFixed(2)}\u00b0` : "-",
-          pd.nakshatra || "-",
-          pd.pada != null ? String(pd.pada) : "-",
-        ]);
-      }
-      y = styledTable(y, ["Planet", "Rashi (Sign)", "Degree", "Nakshatra", "Pada"], vedRows);
-    }
-
-    // Moon nakshatra
-    const moonData = sPositions.Moon || sPositions.moon;
-    if (moonData) {
-      const md = moonData as any;
-      y = subTitle(y, "Moon Nakshatra");
-      y = labelValue(y, "Nakshatra:", md.nakshatra || "N/A");
-      y = labelValue(y, "Pada:", md.pada != null ? String(md.pada) : "N/A");
-      y = bodyText(y, `In Vedic astrology, the Moon's nakshatra (lunar mansion) is one of the most important indicators of personality and destiny. Your Moon nakshatra reveals the emotional texture and karmic themes that permeate your inner life.`);
+      y = mutedItalic(y, `Ayanamsa: ${Number(vData.ayanamsa).toFixed(4)}\u00b0`);
     }
   } else {
-    y = bodyText(y, "Vedic chart data was not available for this profile. The Vedic/Sidereal system uses the sidereal zodiac to provide complementary insights to Western tropical astrology.");
+    y = body(y, "Vedic chart data was not available for this profile. The sidereal zodiac typically shifts placements approximately 23\u00b0 earlier than their tropical positions, revealing complementary karmic dimensions.");
   }
 
-  // =========================================================================
-  // CHAPTER 7: BAZI FOUR PILLARS
-  // =========================================================================
+  // =======================================================================
+  // CHAPTER III: HEALTH READING
+  // =======================================================================
   newPage();
   y = 25;
-  y = sectionTitle(y, "Chapter 7: BaZi Four Pillars");
+  y = chapterTitle(y, "III", "Health Reading", "The Body-Mind Map");
 
-  y = bodyText(y, "BaZi (Eight Characters) is the Chinese astrological system that maps your destiny through four pillars: Year, Month, Day, and Hour. Each pillar contains a Heavenly Stem and an Earthly Branch, representing the interplay of Yin/Yang and the Five Elements (Wood, Fire, Earth, Metal, Water) at the moment of your birth.");
-  y += 3;
+  y = body(y, `Medical astrology provides a symbolic framework for understanding the body-mind connection through the natal chart. This maps planetary energies to physical systems, identifying areas of strength and vulnerability for ${firstName}. This is for self-awareness only and is not medical advice.`);
 
-  if (bazi) {
-    const bData = bazi.data ?? bazi;
+  // Constitution
+  y = sectionHead(y, `Constitution: ${ascSign} Rising`);
+  y = body(y, `With ${ascSign} rising, ${firstName}'s general constitution and vitality are shaped by ${SIGN_ELEMENT[ascSign]} energy. The Ascendant governs the physical body, appearance, and overall vitality. ${ascSign} rising typically gives ${ascSign === "Aries" ? "a strong, athletic build with high energy and notable facial features" : ascSign === "Taurus" ? "a sturdy, well-built frame with a strong neck and robust constitution" : ascSign === "Gemini" ? "a slender, youthful appearance with expressive hands and quick movements" : ascSign === "Cancer" ? "rounded features, sensitive digestion, and vitality tied to emotional state" : ascSign === "Leo" ? "strong posture, warm complexion, and robust heart energy" : ascSign === "Virgo" ? "refined features, sensitive digestive system, and a nervous constitution" : ascSign === "Libra" ? "balanced proportions, kidney sensitivity, and skin that reflects inner state" : ascSign === "Scorpio" ? "intense presence, strong regenerative capacity, and powerful elimination" : ascSign === "Sagittarius" ? "tall or expansive build, strong thighs, and active liver" : ascSign === "Capricorn" ? "lean structure, strong bones, but watch joints and knees over time" : ascSign === "Aquarius" ? "unique appearance, active circulation, and sensitive ankles" : "soft features, sensitive feet, and a permeable immune system"}.`);
+  y = body(y, `Primary body zone: ${SIGN_BODY[ascSign] || "general constitution"}.`);
 
-    // Pillars table
-    const pillars = bData.pillars || bData;
-    const pillarNames = ["Year", "Month", "Day", "Hour"];
+  // 6th House
+  const h6 = houses.find((h: any) => (h.number || h.house) === 6);
+  const h6Sign = h6?.sign || "Virgo";
+  y = sectionHead(y, `Daily Health: 6th House in ${h6Sign}`);
+  y = body(y, `The 6th house governs daily health habits, susceptibility to illness, and functional weakness. With ${h6Sign} on ${firstName}'s 6th house cusp, health habits are colored by ${SIGN_ELEMENT[h6Sign]} energy. The body zone to monitor: ${SIGN_BODY[h6Sign] || "digestive system"}.`);
+
+  const planetsIn6 = mainPlanets.filter(p => posMap[p]?.house === 6);
+  if (planetsIn6.length > 0) {
+    y = body(y, `Planets in the 6th house: ${planetsIn6.join(", ")}. Each adds health significance:`);
+    for (const p of planetsIn6) {
+      const meaning = p === "Sun" ? "vital force concentrated in daily work; health tied to purpose" : p === "Moon" ? "emotional state directly affects digestion and immunity" : p === "Mars" ? "high physical energy but risk of inflammation and overwork injuries" : p === "Saturn" ? "chronic conditions possible; slow but steady health improvements with discipline" : p === "Jupiter" ? "generally protective; watch for excess and liver health" : p === "Pluto" ? "work as transformation; health crises that lead to profound renewal" : "subtle health influences through daily routine";
+      y = bullet(y, `${p}: ${meaning}`);
+    }
+  }
+
+  // Planetary health indicators table
+  y = sectionHead(y, "Planetary Health Indicators");
+  const healthRows: string[][] = [];
+  for (const p of ["Sun", "Moon", "Mars", "Saturn"]) {
+    const info = posMap[p];
+    if (!info) continue;
+    const meaning = p === "Sun" ? "Vital force, general constitution" : p === "Moon" ? "Emotional health, digestion, fluids" : p === "Mars" ? "Energy, inflammation, fevers, accidents" : "Chronic conditions, bones, depression";
+    healthRows.push([`${GLYPH[p]} ${p}`, info.sign, SIGN_BODY[info.sign] || "-", meaning]);
+  }
+  y = styledTable(y, ["Planet", "Sign", "Body Zone", "Health Theme"], healthRows);
+
+  // Element balance health
+  y = sectionHead(y, "Element Balance & Health");
+  for (const elem of ["Fire", "Earth", "Air", "Water"] as const) {
+    const count = elemCount[elem];
+    if (count >= 3) {
+      const info = ELEMENT_HEALTH[elem];
+      y = bullet(y, `${elem} dominant (${count} planets) \u2014 Watch for: ${info.risk}. Recommendations: ${info.advice}.`);
+    } else if (count === 0) {
+      y = bullet(y, `No ${elem} placements \u2014 ${elem} qualities may need conscious cultivation through lifestyle choices.`);
+    }
+  }
+
+  // Biorhythm
+  if (biorhythm) {
+    const bio = biorhythm.data ?? biorhythm;
+    const cycles = bio.cycles || bio;
+    y = sectionHead(y, "Current Biorhythm State");
+    const phys = Math.round(Number(cycles.physical || 0));
+    const emot = Math.round(Number(cycles.emotional || 0));
+    const intel = Math.round(Number(cycles.intellectual || 0));
+    y = body(y, `Physical: ${phys}% \u2014 ${phys > 60 ? "high energy, good time for physical challenges" : phys > 30 ? "moderate energy, maintain regular activity" : "low energy, prioritize rest and recovery"}. Emotional: ${emot}% \u2014 ${emot > 60 ? "emotionally resilient and expressive" : emot > 30 ? "balanced emotional state" : "practice extra self-care"}. Intellectual: ${intel}% \u2014 ${intel > 60 ? "mind is sharp, ideal for complex work" : intel > 30 ? "mental energy is stable" : "break tasks into smaller steps"}.`);
+  }
+
+  y = mutedItalic(y, "This health reading uses astrological symbolism for self-reflection. It is not medical advice. Always consult healthcare professionals for health concerns.");
+
+  // =======================================================================
+  // CHAPTER IV: CHINESE ASTROLOGY (BAZI)
+  // =======================================================================
+  newPage();
+  y = 25;
+  y = chapterTitle(y, "IV", "Chinese Astrology (BaZi)", "The Four Pillars of Destiny");
+
+  y = body(y, `BaZi, literally "eight characters," derives four pillars from the birth data \u2014 each pillar consisting of a Heavenly Stem and an Earthly Branch. These eight characters map the energetic blueprint of a life, encoding elemental relationships, animal archetypes, and temporal dynamics that unfold across decades.`);
+
+  if (baziData) {
+    const pillars = baziData.pillars || baziData;
     const pillarKeys = ["year", "month", "day", "hour"];
+    const pillarNames = ["Year (Ancestry)", "Month (Career)", "Day (Self)", "Hour (Inner Self)"];
     const pillarRows: string[][] = [];
     for (let i = 0; i < pillarKeys.length; i++) {
       const p = pillars[pillarKeys[i]] || {};
@@ -1082,643 +1108,285 @@ export async function generateComprehensiveReport(
         p.animal || p.zodiac || "-",
       ]);
     }
-    if (pillarRows.some((r) => r.slice(1).some((c) => c !== "-"))) {
-      y = subTitle(y, "The Four Pillars");
-      y = styledTable(y, ["Pillar", "Heavenly Stem", "Earthly Branch", "Element", "Animal"], pillarRows);
+    if (pillarRows.some(r => r.slice(1).some(c => c !== "-"))) {
+      y = styledTable(y, ["Pillar", "Stem", "Branch", "Element", "Animal"], pillarRows);
+    }
+
+    if (dayMaster) {
+      y = planetHead(y, `${dayMaster} Day Master`);
+      y = body(y, `The Day Master represents ${firstName}'s core self in BaZi. As a ${dayMaster} Day Master, ${firstName} embodies the qualities of this element \u2014 it is the lens through which all other chart dynamics are interpreted.`);
     }
 
     // Element balance
-    const elemBal = bData.element_balance || bData.elements || {};
+    const elemBal = baziData.element_balance || baziData.elements || {};
     if (Object.keys(elemBal).length > 0) {
-      y = subTitle(y, "Five Element Balance");
+      y = sectionHead(y, "Elemental Analysis");
       const ebRows: string[][] = [];
       for (const [elem, val] of Object.entries(elemBal)) {
-        ebRows.push([elem, typeof val === "number" ? String(val) : String(val)]);
+        ebRows.push([elem, String(val)]);
       }
       y = styledTable(y, ["Element", "Strength"], ebRows);
     }
-
-    // Favorable / unfavorable
-    if (bData.favorable_element || bData.favorable) {
-      y = labelValue(y, "Favorable Element:", bData.favorable_element || bData.favorable);
-    }
-    if (bData.unfavorable_element || bData.unfavorable) {
-      y = labelValue(y, "Unfavorable Element:", bData.unfavorable_element || bData.unfavorable);
-    }
-
-    // Day master
-    if (bData.day_master) {
-      y = subTitle(y, "Day Master");
-      y = bodyText(y, `Your Day Master (the Heavenly Stem of your Day Pillar) is ${typeof bData.day_master === "string" ? bData.day_master : JSON.stringify(bData.day_master)}. The Day Master represents your core self in BaZi, analogous to the Sun sign in Western astrology.`);
-    }
-
-    // Ten Gods
-    const tenGods = bData.ten_gods || bData.gods || {};
-    if (Object.keys(tenGods).length > 0) {
-      y = subTitle(y, "Ten Gods Analysis");
-      const tgRows: string[][] = [];
-      for (const [god, val] of Object.entries(tenGods)) {
-        const v = val as any;
-        tgRows.push([god, typeof v === "string" ? v : v.description || v.element || JSON.stringify(v)]);
-      }
-      y = styledTable(y, ["Ten God", "Description"], tgRows);
-    }
   } else {
-    y = bodyText(y, "BaZi chart data was not available for this profile.");
+    y = body(y, "BaZi chart data was not available for this profile.");
   }
 
-  // =========================================================================
-  // CHAPTER 8: PERSONALITY SYNTHESIS
-  // =========================================================================
+  // =======================================================================
+  // CHAPTER V: PERSONALITY SYNTHESIS
+  // =======================================================================
   newPage();
   y = 25;
-  y = sectionTitle(y, "Chapter 8: Personality Synthesis");
+  y = chapterTitle(y, "V", "Personality Synthesis", "The Psychological Portrait");
 
-  y = bodyText(y, "This chapter integrates multiple personality frameworks \u2014 MBTI cognitive functions, Enneagram type dynamics, Jungian archetypes, color psychology, and spirit animal symbolism \u2014 to build a multidimensional portrait of your psychological landscape.");
-  y += 3;
+  onProgress?.({ stage: "Weaving personality portrait...", percent: 85 });
 
   // MBTI
-  y = subTitle(y, "MBTI Cognitive Profile");
-  y = labelValue(y, "Derived Type:", mbtiType);
-  if (synthesis) {
-    const sData = synthesis.data ?? synthesis;
-    if (sData.dominant_function) y = labelValue(y, "Dominant Function:", sData.dominant_function);
-    if (sData.auxiliary_function) y = labelValue(y, "Auxiliary Function:", sData.auxiliary_function);
-    if (sData.narrative_summary) {
-      y = bodyText(y, sData.narrative_summary);
-    }
-    // Base weights
-    const weights = sData.base_weights || sData.final_weights;
-    if (weights && typeof weights === "object") {
-      const wRows: string[][] = [];
-      for (const [dim, val] of Object.entries(weights)) {
-        wRows.push([dim, typeof val === "number" ? `${Math.round(val * 100)}%` : String(val)]);
-      }
-      if (wRows.length > 0) {
-        y = styledTable(y, ["Dimension", "Score"], wRows);
-      }
-    }
+  y = sectionHead(y, `MBTI: ${mbtiType}`);
+  if (synthData) {
+    const sd = synthData.data ?? synthData;
+    if (sd.dominant_function) y = body(y, `Dominant cognitive function: ${sd.dominant_function}. ${sd.auxiliary_function ? `Auxiliary: ${sd.auxiliary_function}.` : ""}`);
+    if (sd.narrative_summary) y = body(y, sd.narrative_summary);
   } else {
-    y = bodyText(y, `Based on your Sun in ${sunSign}, your chart-derived MBTI type is ${mbtiType}. This suggests a cognitive style that processes information through ${mbtiType.includes("N") ? "intuitive pattern recognition" : "concrete sensory data"} and makes decisions based on ${mbtiType.includes("F") ? "personal values and empathy" : "logical analysis and objectivity"}.`);
+    y = body(y, `Based on the natal chart, ${firstName}'s derived MBTI type is ${mbtiType}. This suggests a cognitive style oriented toward ${mbtiType.includes("N") ? "pattern recognition and abstract possibilities" : "concrete facts and practical realities"}, with decisions filtered through ${mbtiType.includes("F") ? "personal values and empathy" : "logical analysis and objectivity"}.`);
   }
 
   // Enneagram
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Enneagram Type");
   if (enneagram) {
-    const eData = enneagram.data ?? enneagram;
-    if (eData.type) y = labelValue(y, "Core Type:", `Type ${eData.type}${eData.name ? ` \u2014 ${eData.name}` : ""}`);
-    if (eData.wing) y = labelValue(y, "Wing:", String(eData.wing));
-    if (eData.tritype) y = labelValue(y, "Tritype:", String(eData.tritype));
-    if (eData.core_fear) y = labelValue(y, "Core Fear:", eData.core_fear);
-    if (eData.core_desire) y = labelValue(y, "Core Desire:", eData.core_desire);
-    if (eData.growth_direction) y = labelValue(y, "Growth Direction:", `Type ${eData.growth_direction}`);
-    if (eData.stress_direction) y = labelValue(y, "Stress Direction:", `Type ${eData.stress_direction}`);
-    if (eData.description) y = bodyText(y, eData.description);
-  } else {
-    y = bodyText(y, "Enneagram data was not available from the server.");
+    const ed = enneagram.data ?? enneagram;
+    y = sectionHead(y, `Enneagram: Type ${ed.type || ""}${ed.name ? ` \u2014 ${ed.name}` : ""}`);
+    if (ed.core_fear) y = body(y, `Core Fear: ${ed.core_fear}. Core Desire: ${ed.core_desire || "N/A"}.`);
+    if (ed.description) y = body(y, ed.description);
   }
 
-  // Jungian Archetypes
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Jungian Archetypes");
+  // Archetypes
   if (archetypes) {
-    const aData = archetypes.data ?? archetypes;
-    const primary = aData.primary_archetype || aData.primary;
-    const secondary = aData.secondary_archetype || aData.secondary;
-    const shadow = aData.shadow_archetype || aData.shadow;
-
+    const ad = archetypes.data ?? archetypes;
+    const primary = ad.primary_archetype || ad.primary;
+    const secondary = ad.secondary_archetype || ad.secondary;
+    const shadow = ad.shadow_archetype || ad.shadow;
+    y = sectionHead(y, "Jungian Archetypes");
     if (primary) {
-      const pName = typeof primary === "string" ? primary : primary.name || JSON.stringify(primary);
-      const pDesc = typeof primary === "object" ? primary.description : null;
-      y = labelValue(y, "Primary Archetype:", pName);
-      if (pDesc) y = bodyText(y, pDesc);
+      const pn = typeof primary === "string" ? primary : primary.name || JSON.stringify(primary);
+      y = body(y, `Primary: ${pn}. ${typeof primary === "object" && primary.description ? primary.description : `This archetype represents ${firstName}'s dominant pattern of behavior and motivation.`}`);
     }
     if (secondary) {
-      const sName = typeof secondary === "string" ? secondary : secondary.name || JSON.stringify(secondary);
-      y = labelValue(y, "Secondary Archetype:", sName);
+      const sn = typeof secondary === "string" ? secondary : secondary.name || "";
+      y = body(y, `Secondary: ${sn}. Shadow: ${shadow ? (typeof shadow === "string" ? shadow : shadow.name || "") : "N/A"}.`);
     }
-    if (shadow) {
-      const shName = typeof shadow === "string" ? shadow : shadow.name || JSON.stringify(shadow);
-      const shDesc = typeof shadow === "object" ? shadow.description : null;
-      y = labelValue(y, "Shadow Archetype:", shName);
-      if (shDesc) y = bodyText(y, shDesc);
-    }
-
-    y = bodyText(y, "Your archetypes represent the dominant patterns of behavior, motivation, and unconscious drives that shape your personality. The Primary archetype is your most conscious pattern, the Secondary supports it, and the Shadow represents repressed qualities that may emerge under stress.");
-  } else {
-    y = bodyText(y, "Jungian archetype data was not available from the server.");
-  }
-
-  // Color Psychology
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Color Psychology");
-  if (colorPalette) {
-    const cpData = colorPalette.data ?? colorPalette;
-    const colors = cpData.colors || cpData.palette || cpData;
-    if (Array.isArray(colors)) {
-      const colorRows = colors.map((c: any) => [
-        c.name || c.color || "-",
-        c.hex || "-",
-        c.meaning || c.description || "-",
-      ]);
-      y = styledTable(y, ["Color", "Hex", "Meaning"], colorRows);
-    } else if (typeof colors === "object") {
-      const colorRows: string[][] = [];
-      for (const [name, val] of Object.entries(colors)) {
-        const v = val as any;
-        colorRows.push([
-          name,
-          typeof v === "string" ? v : v.hex || "-",
-          typeof v === "object" ? (v.meaning || v.description || "-") : "-",
-        ]);
-      }
-      if (colorRows.length > 0) {
-        y = styledTable(y, ["Color", "Value", "Meaning"], colorRows);
-      }
-    }
-    y = bodyText(y, "Your personal color palette reflects the psychological energies expressed through your Big Three placements. Surrounding yourself with these colors can enhance your mood and align with your natural energy.");
-  } else {
-    y = italicText(y, "Color psychology data was not available.");
   }
 
   // Spirit Animal
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Spirit Animal Totems");
   if (spiritAnimal) {
-    const saData = spiritAnimal.data ?? spiritAnimal;
-    const primary = saData.primary || saData.primary_animal || saData.spirit_animal;
-    const secondary = saData.secondary || saData.secondary_animal;
-    const shadow = saData.shadow || saData.shadow_animal;
-
+    const sa = spiritAnimal.data ?? spiritAnimal;
+    const primary = sa.primary || sa.primary_animal || sa.spirit_animal;
     if (primary) {
-      const name = typeof primary === "string" ? primary : primary.animal || primary.name || JSON.stringify(primary);
+      const name = typeof primary === "string" ? primary : primary.animal || primary.name || "";
+      y = sectionHead(y, `Spirit Animal: ${name}`);
       const desc = typeof primary === "object" ? (primary.meaning || primary.description) : null;
-      y = labelValue(y, "Primary Totem:", name);
-      if (desc) y = bodyText(y, desc);
+      if (desc) y = body(y, desc);
     }
-    if (secondary) {
-      const name = typeof secondary === "string" ? secondary : secondary.animal || secondary.name || JSON.stringify(secondary);
-      y = labelValue(y, "Secondary Totem:", name);
-    }
-    if (shadow) {
-      const name = typeof shadow === "string" ? shadow : shadow.animal || shadow.name || JSON.stringify(shadow);
-      y = labelValue(y, "Shadow Totem:", name);
-    }
-  } else {
-    y = italicText(y, "Spirit animal data was not available.");
   }
 
-  // Cross-synthesis
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Personality Cross-Synthesis");
-  y = bodyText(y, `Your MBTI type (${mbtiType}) combined with your Enneagram type ${enneagram?.data?.type || enneagram?.type || ""} and ${typeof (archetypes?.data?.primary_archetype || archetypes?.data?.primary || archetypes?.primary_archetype || archetypes?.primary) === "string" ? (archetypes?.data?.primary_archetype || archetypes?.data?.primary || archetypes?.primary_archetype || archetypes?.primary) : "your primary"} archetype creates a personality profile that is ${mbtiType.startsWith("I") ? "introspective" : "expressive"}, ${mbtiType.includes("N") ? "intuitive" : "pragmatic"}, and oriented toward ${mbtiType.includes("J") ? "structure and completion" : "flexibility and exploration"}. This combination suggests a person who processes the world through multiple sophisticated lenses.`);
-
-  // =========================================================================
-  // CHAPTER 9: TAROT & NUMEROLOGY
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 9: Tarot & Numerology");
-
-  y = bodyText(y, "Your birth date encodes numerological and Tarot archetypes that add another layer to your cosmic blueprint. Birth cards represent the major archetypal energies that accompany you throughout life.");
-  y += 3;
-
+  // Tarot
   if (tarotCards) {
-    const tData = tarotCards.data ?? tarotCards;
-    y = subTitle(y, "Birth Tarot Cards");
-
-    const cards = tData.cards || tData.birth_cards || [];
+    const td = tarotCards.data ?? tarotCards;
+    y = sectionHead(y, "Birth Tarot Cards");
+    const cards = td.cards || td.birth_cards || [];
     if (Array.isArray(cards) && cards.length > 0) {
       for (const card of cards) {
-        y = ensureSpace(y, 15);
-        const cardName = typeof card === "string" ? card : card.name || card.card || JSON.stringify(card);
-        const cardDesc = typeof card === "object" ? (card.description || card.meaning || card.interpretation) : null;
-        y = labelValue(y, "Card:", cardName);
-        if (cardDesc) y = bodyText(y, cardDesc);
+        const cn = typeof card === "string" ? card : card.name || card.card || "";
+        const cd = typeof card === "object" ? (card.description || card.meaning || "") : "";
+        y = body(y, `${cn}${cd ? ": " + cd : ""}`);
       }
-    } else if (tData.personality_card || tData.soul_card) {
-      if (tData.personality_card) y = labelValue(y, "Personality Card:", typeof tData.personality_card === "string" ? tData.personality_card : tData.personality_card.name || JSON.stringify(tData.personality_card));
-      if (tData.soul_card) y = labelValue(y, "Soul Card:", typeof tData.soul_card === "string" ? tData.soul_card : tData.soul_card.name || JSON.stringify(tData.soul_card));
-      if (tData.year_card) y = labelValue(y, "Year Card:", typeof tData.year_card === "string" ? tData.year_card : tData.year_card.name || JSON.stringify(tData.year_card));
+    } else if (td.personality_card) {
+      y = body(y, `Personality Card: ${typeof td.personality_card === "string" ? td.personality_card : td.personality_card.name || ""}`);
     }
-
-    if (tData.life_path || tData.life_path_number) {
-      y += 3;
-      y = subTitle(y, "Life Path Number");
-      y = labelValue(y, "Life Path:", String(tData.life_path || tData.life_path_number));
-      if (tData.life_path_meaning || tData.life_path_description) {
-        y = bodyText(y, tData.life_path_meaning || tData.life_path_description);
-      }
-    }
-  } else {
-    // Manual life path calculation
-    y = subTitle(y, "Life Path Number");
-    const digits = profile.birthDate.replace(/-/g, "").split("").map(Number);
-    let sum = digits.reduce((a, b) => a + b, 0);
-    while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
-      sum = String(sum).split("").map(Number).reduce((a, b) => a + b, 0);
-    }
-    y = labelValue(y, "Life Path:", String(sum));
-    y = bodyText(y, `Life Path ${sum} individuals are ${sum === 1 ? "independent leaders and pioneers" : sum === 2 ? "diplomatic peacemakers and partners" : sum === 3 ? "creative communicators and entertainers" : sum === 4 ? "practical builders and organizers" : sum === 5 ? "adventurous seekers of freedom and change" : sum === 6 ? "nurturing caregivers and harmonizers" : sum === 7 ? "spiritual seekers and analytical thinkers" : sum === 8 ? "ambitious achievers and material masters" : sum === 9 ? "compassionate humanitarians and old souls" : sum === 11 ? "intuitive visionaries and spiritual teachers (Master Number)" : sum === 22 ? "master builders who manifest grand visions (Master Number)" : "master teachers who uplift humanity (Master Number)"}. This number represents the overarching theme of your life journey.`);
-    y = italicText(y, "Tarot birth card data was not available from the server.");
   }
 
-  // =========================================================================
-  // CHAPTER 10: COSMIC TIMING
-  // =========================================================================
+  // Life path
+  y = sectionHead(y, "Life Path Number");
+  const digits = profile.birthDate.replace(/-/g, "").split("").map(Number);
+  let lpSum = digits.reduce((a, b) => a + b, 0);
+  while (lpSum > 9 && lpSum !== 11 && lpSum !== 22 && lpSum !== 33) {
+    lpSum = String(lpSum).split("").map(Number).reduce((a, b) => a + b, 0);
+  }
+  y = body(y, `Life Path ${lpSum} \u2014 ${lpSum === 1 ? "The Independent Leader" : lpSum === 2 ? "The Diplomat & Partner" : lpSum === 3 ? "The Creative Communicator" : lpSum === 4 ? "The Master Builder" : lpSum === 5 ? "The Freedom Seeker" : lpSum === 6 ? "The Nurturing Harmonizer" : lpSum === 7 ? "The Seeker of Truth" : lpSum === 8 ? "The Material Master" : lpSum === 9 ? "The Humanitarian" : lpSum === 11 ? "The Master Visionary" : lpSum === 22 ? "The Master Builder" : "The Master Teacher"}. ${firstName}'s life path organizes the entire journey around ${lpSum === 1 ? "independence, initiative, and original creation" : lpSum === 2 ? "cooperation, sensitivity, and partnership" : lpSum === 3 ? "creative expression, joy, and communication" : lpSum === 4 ? "structure, discipline, and lasting foundations" : lpSum === 5 ? "freedom, adventure, and transformative experience" : lpSum === 6 ? "responsibility, beauty, and harmonious service" : lpSum === 7 ? "research, analysis, introspection, and spiritual understanding" : lpSum === 8 ? "ambition, power, and material mastery" : lpSum === 9 ? "compassion, completion, and humanitarian service" : "visionary insight and spiritual illumination"}.`);
+
+  // =======================================================================
+  // CHAPTER VI: COSMIC TIMING
+  // =======================================================================
   newPage();
   y = 25;
-  y = sectionTitle(y, "Chapter 10: Cosmic Timing");
+  y = chapterTitle(y, "VI", "Cosmic Timing", "The Current Sky");
 
-  y = bodyText(y, "This chapter examines the current cosmic climate as it relates to your natal chart \u2014 where the planets are now, how they aspect your birth chart, and what predictive techniques reveal about your current life chapter.");
-  y += 3;
+  onProgress?.({ stage: "Mapping cosmic timing...", percent: 90 });
 
-  // Current transits
-  y = subTitle(y, "Current Transits");
+  // Transits
   if (transits) {
+    y = sectionHead(y, "Current Transits");
     const trData = transits.data ?? transits;
-    const trList: any[] = trData.transits || trData.aspects || [];
-    if (Array.isArray(trList) && trList.length > 0) {
-      const trRows = trList.slice(0, 20).map((t: any) => [
+    const trList: any[] = (trData.transits || trData.aspects || []).slice(0, 10);
+    if (trList.length > 0) {
+      const trRows = trList.map((t: any) => [
         t.transiting_planet || t.planet || "-",
         t.aspect || t.type || "-",
         t.natal_planet || t.natal || "-",
-        t.orb != null ? `${Number(t.orb).toFixed(2)}\u00b0` : "-",
-        t.interpretation ? t.interpretation.substring(0, 60) + (t.interpretation.length > 60 ? "..." : "") : "-",
+        t.orb != null ? `${Number(t.orb).toFixed(1)}\u00b0` : "-",
       ]);
-      y = styledTable(y, ["Transit Planet", "Aspect", "Natal Planet", "Orb", "Theme"], trRows);
-    } else {
-      y = bodyText(y, "Current transit aspect data is available but contains no significant aspects at this time.");
+      y = styledTable(y, ["Transit", "Aspect", "Natal", "Orb"], trRows);
     }
-  } else {
-    y = italicText(y, "Transit data was not available from the server.");
   }
 
-  // Solar return
-  y = ensureSpace(y, 30);
-  y = subTitle(y, `Solar Return ${new Date().getFullYear()}`);
+  // Solar Return
   if (solarReturn) {
+    y = sectionHead(y, `Solar Return ${new Date().getFullYear()}`);
+    y = body(y, `The Solar Return chart for ${new Date().getFullYear()} reveals the themes from ${firstName}'s birthday this year to the next.`);
     const srData = solarReturn.data ?? solarReturn;
-    y = bodyText(y, `Your Solar Return chart for ${new Date().getFullYear()} reveals the themes and energies that will be prominent from your birthday this year to the next.`);
-
-    const srPositions = srData.positions || {};
-    if (Object.keys(srPositions).length > 0) {
+    const srPos = srData.positions || {};
+    if (Object.keys(srPos).length > 0) {
       const srRows: string[][] = [];
-      for (const [planet, info] of Object.entries(srPositions)) {
+      for (const [planet, info] of Object.entries(srPos)) {
         const pd = info as any;
-        srRows.push([planet, pd.sign || "-", pd.degree != null ? `${Number(pd.degree).toFixed(2)}\u00b0` : "-"]);
+        srRows.push([planet, pd.sign || "-", pd.degree != null ? `${Number(pd.degree).toFixed(1)}\u00b0` : "-"]);
       }
       y = styledTable(y, ["Planet", "SR Sign", "Degree"], srRows.slice(0, 10));
     }
-  } else {
-    y = italicText(y, "Solar return data was not available for this year.");
   }
 
   // Progressions
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Secondary Progressions");
   if (progressions) {
+    y = sectionHead(y, "Secondary Progressions");
     const prData = progressions.data ?? progressions;
-    y = bodyText(y, "Secondary progressions advance the natal chart by one day for each year of life, revealing the slow inner evolution of your psyche. Progressed Sun and Moon sign changes mark major life chapter transitions.");
-
-    const prPositions = prData.positions || prData.progressed_positions || {};
-    if (Object.keys(prPositions).length > 0) {
+    const prPos = prData.positions || prData.progressed_positions || {};
+    y = body(y, `Secondary progressions advance the natal chart by one day for each year of life, revealing slow inner evolution. ${firstName}'s progressed chart shows:`);
+    if (Object.keys(prPos).length > 0) {
       const prRows: string[][] = [];
-      for (const [planet, info] of Object.entries(prPositions)) {
+      for (const [planet, info] of Object.entries(prPos)) {
         const pd = info as any;
-        prRows.push([planet, pd.sign || "-", pd.degree != null ? `${Number(pd.degree).toFixed(2)}\u00b0` : "-"]);
+        prRows.push([planet, pd.sign || "-", pd.degree != null ? `${Number(pd.degree).toFixed(1)}\u00b0` : "-"]);
       }
-      y = styledTable(y, ["Progressed Planet", "Sign", "Degree"], prRows.slice(0, 10));
+      y = styledTable(y, ["Planet", "Progressed Sign", "Degree"], prRows.slice(0, 8));
     }
-
-    const pSun = prPositions.Sun || prPositions.sun;
-    const pMoon = prPositions.Moon || prPositions.moon;
-    if (pSun || pMoon) {
-      y = bodyText(y, `${pSun ? `Your Progressed Sun is in ${(pSun as any).sign || "transition"}, indicating the current chapter of your identity evolution.` : ""} ${pMoon ? `Your Progressed Moon is in ${(pMoon as any).sign || "transition"}, coloring your emotional focus for the current 2.5-year cycle.` : ""}`);
-    }
-  } else {
-    y = italicText(y, "Progression data was not available.");
   }
 
-  // Annual profection
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Annual Profection");
+  // Profection
   if (profection) {
     const pfData = profection.data ?? profection;
-    if (pfData.profected_sign || pfData.sign) y = labelValue(y, "Profected Sign:", pfData.profected_sign || pfData.sign);
-    if (pfData.profected_house || pfData.house) y = labelValue(y, "Profected House:", String(pfData.profected_house || pfData.house));
-    if (pfData.lord_of_year || pfData.time_lord) y = labelValue(y, "Lord of the Year:", pfData.lord_of_year || pfData.time_lord);
-    y = bodyText(y, "Annual profections assign a house to each year of life in sequence. The sign and ruler of your profected house become activated this year, bringing their themes into focus.");
-  } else {
-    y = italicText(y, "Profection data was not available.");
+    y = sectionHead(y, "Annual Profection");
+    if (pfData.profected_sign || pfData.sign) y = body(y, `Profected Sign: ${pfData.profected_sign || pfData.sign}. ${pfData.lord_of_year || pfData.time_lord ? `Lord of the Year: ${pfData.lord_of_year || pfData.time_lord}.` : ""} Annual profections assign a house to each year of life, activating its themes and ruler.`);
   }
 
-  // Hellenistic sect
-  y = ensureSpace(y, 20);
-  y = subTitle(y, "Sect");
+  // Sect
   if (sect) {
     const secData = sect.data ?? sect;
-    if (secData.sect) y = labelValue(y, "Chart Sect:", secData.sect);
-    if (secData.benefic) y = labelValue(y, "Sect Benefic:", secData.benefic);
-    if (secData.malefic) y = labelValue(y, "Sect Malefic:", secData.malefic);
-    y = bodyText(y, `Your chart is a ${secData.sect || "diurnal/nocturnal"} chart, which means the ${secData.sect === "diurnal" ? "Sun sect (Sun, Jupiter, Saturn)" : "Moon sect (Moon, Venus, Mars)"} planets are more supportive in your life. Your sect benefic (${secData.benefic || "the supportive planet"}) works most easily for you.`);
-  } else {
-    y = italicText(y, "Sect data was not available.");
+    if (secData.sect) {
+      y = sectionHead(y, "Chart Sect");
+      y = body(y, `This is a ${secData.sect} chart. The sect benefic (${secData.benefic || "supportive planet"}) works most easily for ${firstName}. The sect malefic (${secData.malefic || "challenging planet"}) requires more conscious navigation.`);
+    }
   }
 
-  // =========================================================================
-  // CHAPTER 11: SABIAN SYMBOLS
-  // =========================================================================
+  // =======================================================================
+  // CHAPTER VII: CROSS-SYSTEM SYNTHESIS
+  // =======================================================================
   newPage();
   y = 25;
-  y = sectionTitle(y, "Chapter 11: Sabian Symbols");
+  y = chapterTitle(y, "VII", "Cross-System Synthesis", "The Unified Portrait");
 
-  y = bodyText(y, "Sabian symbols are a set of 360 symbolic images, one for each degree of the zodiac, channeled by clairvoyant Elsie Wheeler in 1925. Each planet in your chart activates the symbol for its degree, adding a poetic and intuitive layer to the interpretation.");
-  y += 3;
+  onProgress?.({ stage: "Weaving the unified portrait...", percent: 95 });
 
-  if (sabianSymbols) {
-    const ssData = sabianSymbols.data ?? sabianSymbols;
-    const symbols = ssData.symbols || ssData.sabian_symbols || ssData;
+  y = body(y, `When all systems are overlaid \u2014 Western tropical astrology, Vedic sidereal astrology, BaZi Chinese astrology, numerology, and personality frameworks \u2014 a unified portrait emerges. The convergences are not coincidental; they reveal the same soul architecture viewed through different lenses.`);
 
-    if (typeof symbols === "object" && !Array.isArray(symbols)) {
-      const ssRows: string[][] = [];
-      for (const [planet, info] of Object.entries(symbols)) {
-        const s = info as any;
-        ssRows.push([
-          planet,
-          s.degree != null ? `${s.degree}\u00b0 ${s.sign || ""}` : "-",
-          typeof s === "string" ? s : s.symbol || s.sabian || s.description || "-",
-          typeof s === "object" ? (s.keywords || s.meaning || "-") : "-",
-        ]);
-      }
-      if (ssRows.length > 0) {
-        y = styledTable(y, ["Planet", "Degree", "Symbol", "Keywords"], ssRows);
-      }
+  // Theme 1
+  y = sectionHead(y, "1. The Core Identity");
+  y = body(y, `Every system in ${firstName}'s reading confirms a consistent core: ${sunSign} Sun in the ${sunHouse}${sunHouse === 1 ? "st" : sunHouse === 2 ? "nd" : sunHouse === 3 ? "rd" : "th"} House provides the Western anchor, while the ${SIGN_ELEMENT[sunSign]} element echoes through the Life Path ${lpSum} numerological signature. The MBTI type ${mbtiType} reinforces the cognitive style suggested by the natal Mercury, and the Enneagram ${enneagram?.data?.type || enneagram?.type ? `Type ${enneagram.data?.type || enneagram.type}` : "type"} reveals the motivational engine beneath the surface.`);
 
-      // Detailed interpretations for key planets
-      for (const planet of ["Sun", "Moon", "Mercury", "Venus", "Mars"]) {
-        const s = symbols[planet];
-        if (s && typeof s === "object" && (s.interpretation || s.meaning)) {
-          y = ensureSpace(y, 20);
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(...EMERALD);
-          doc.text(`${planet}: ${s.symbol || s.sabian || ""}`, M, y);
-          y += 5;
-          y = bodyText(y, s.interpretation || s.meaning);
-        }
-      }
-    } else if (Array.isArray(symbols)) {
-      const ssRows = symbols.map((s: any) => [
-        s.planet || "-",
-        s.degree != null ? `${s.degree}\u00b0 ${s.sign || ""}` : "-",
-        s.symbol || s.sabian || "-",
-        s.keywords || s.meaning || "-",
-      ]);
-      y = styledTable(y, ["Planet", "Degree", "Symbol", "Keywords"], ssRows);
-    }
-  } else {
-    y = italicText(y, "Sabian symbol data was not available from the server.");
-  }
+  // Theme 2
+  y = sectionHead(y, "2. The Emotional Architecture");
+  y = body(y, `${firstName}'s ${moonSign} Moon in the ${moonHouse}${moonHouse === 1 ? "st" : moonHouse === 2 ? "nd" : moonHouse === 3 ? "rd" : "th"} House defines the emotional core. ${vedic ? `The Vedic chart${(vedic.data ?? vedic).positions?.Moon?.nakshatra ? ` places the Moon in ${(vedic.data ?? vedic).positions.Moon.nakshatra} nakshatra, adding` : " adds"} a karmic dimension to the emotional landscape.` : ""} The ${SIGN_ELEMENT[moonSign]} emotional nature ${SIGN_ELEMENT[moonSign] === SIGN_ELEMENT[sunSign] ? `harmonizes naturally with the ${SIGN_ELEMENT[sunSign]} Sun, creating internal consistency` : `contrasts productively with the ${SIGN_ELEMENT[sunSign]} Sun, creating a rich inner dialogue between different modes of being`}.`);
 
-  // Harmonics
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "7th Harmonic Chart");
-  if (harmonics) {
-    const hData = harmonics.data ?? harmonics;
-    y = bodyText(y, "The 7th harmonic chart reveals themes of inspiration, spiritual seeking, and the creative imagination. Aspects and patterns here show what uniquely inspires and moves you at a soul level.");
-    const hPositions = hData.positions || hData.harmonic_positions || {};
-    if (Object.keys(hPositions).length > 0) {
-      const hRows: string[][] = [];
-      for (const [planet, info] of Object.entries(hPositions)) {
-        const pd = info as any;
-        hRows.push([planet, pd.sign || "-", pd.degree != null ? `${Number(pd.degree).toFixed(2)}\u00b0` : pd.longitude != null ? `${Number(pd.longitude).toFixed(2)}\u00b0` : "-"]);
-      }
-      y = styledTable(y, ["Planet", "Harmonic Sign", "Degree"], hRows.slice(0, 10));
-    }
-  } else {
-    y = italicText(y, "Harmonic chart data was not available.");
-  }
-
-  // =========================================================================
-  // CHAPTER 12: NINE STAR KI & FENG SHUI
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 12: Nine Star Ki & Feng Shui");
-
-  y = subTitle(y, "Nine Star Ki");
-  if (nineStarKi) {
-    const nData = nineStarKi.data ?? nineStarKi;
-    y = bodyText(y, "Nine Star Ki is a Japanese adaptation of the Chinese I Ching and Lo Shu square that assigns three numbers to your birth date, revealing your core energy, emotional nature, and surface personality.");
-
-    if (nData.main_star || nData.base_star || nData.year_star) {
-      y = labelValue(y, "Main Star:", String(nData.main_star || nData.base_star || nData.year_star));
-    }
-    if (nData.character_star || nData.emotional_star || nData.month_star) {
-      y = labelValue(y, "Character Star:", String(nData.character_star || nData.emotional_star || nData.month_star));
-    }
-    if (nData.energetic_star || nData.surface_star) {
-      y = labelValue(y, "Energetic Star:", String(nData.energetic_star || nData.surface_star));
-    }
-    if (nData.element) y = labelValue(y, "Element:", nData.element);
-    if (nData.description) y = bodyText(y, nData.description);
-    if (nData.personality) y = bodyText(y, nData.personality);
-  } else {
-    y = italicText(y, "Nine Star Ki data was not available.");
-  }
-
-  y += 5;
-  y = subTitle(y, "Feng Shui Flying Stars");
-  if (fengShui) {
-    const fsData = fengShui.data ?? fengShui;
-    y = bodyText(y, "Feng Shui Flying Stars map the energy distribution of your birth year, showing auspicious and challenging directions. This system helps optimize your living and working environments.");
-
-    const grid = fsData.grid || fsData.flying_stars || fsData.stars;
-    if (Array.isArray(grid)) {
-      const gridRows = grid.map((row: any, i: number) => {
-        if (Array.isArray(row)) {
-          return row.map((cell: any) => String(cell));
-        }
-        return [String(i), String(row)];
-      });
-      if (gridRows.length > 0 && gridRows[0].length >= 2) {
-        y = styledTable(y, gridRows[0].map((_: any, i: number) => i === 0 ? "Position" : `Col ${i}`), gridRows);
-      }
-    } else if (typeof grid === "object" && grid) {
-      const fsRows: string[][] = [];
-      for (const [dir, val] of Object.entries(grid)) {
-        fsRows.push([dir, String(val)]);
-      }
-      if (fsRows.length > 0) {
-        y = styledTable(y, ["Direction", "Star"], fsRows);
-      }
-    }
-
-    if (fsData.favorable_directions) {
-      y = labelValue(y, "Favorable:", Array.isArray(fsData.favorable_directions) ? fsData.favorable_directions.join(", ") : String(fsData.favorable_directions));
-    }
-  } else {
-    y = italicText(y, "Feng Shui data was not available.");
-  }
-
-  // =========================================================================
-  // CHAPTER 13: CROSS-SYSTEM SYNTHESIS
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Chapter 13: Cross-System Synthesis");
-
-  y = bodyText(y, "This final analytical chapter weaves together findings from Western, Vedic, BaZi, and personality systems to identify convergent themes and the overarching narrative of your cosmic blueprint.");
-  y += 3;
-
-  // Western vs Vedic
-  y = subTitle(y, "Western & Vedic Comparison");
-  const vedicSunSign = vedic?.data?.positions?.Sun?.sign || vedic?.positions?.Sun?.sign;
-  const vedicMoonSign = vedic?.data?.positions?.Moon?.sign || vedic?.positions?.Moon?.sign;
-  if (vedicSunSign || vedicMoonSign) {
-    y = bodyText(y, `Your Western (tropical) Sun is in ${sunSign}, while your Vedic (sidereal) Sun is in ${vedicSunSign || "a different sign"}. This ${sunSign === vedicSunSign ? "rare agreement between both systems reinforces the themes of this sign" : "difference reflects the two zodiacs' distinct reference frames \u2014 the tropical chart describes your psychological reality, while the sidereal chart reveals your karmic blueprint"}.`);
-    if (vedicMoonSign) {
-      y = bodyText(y, `Your Vedic Moon is in ${vedicMoonSign}${moonSign === vedicMoonSign ? ", matching your Western Moon and emphasizing these emotional qualities" : `, compared to your Western Moon in ${moonSign}. Both perspectives offer complementary insight into your emotional nature`}.`);
-    }
-  } else {
-    y = bodyText(y, `Your Western chart places the Sun in ${sunSign} and Moon in ${moonSign}. Without Vedic data available for comparison, we can note that the sidereal positions would typically fall approximately one sign earlier, revealing the complementary karmic dimension.`);
-  }
-  y += 3;
-
-  // BaZi element mapping
-  y = subTitle(y, "BaZi & Western Element Mapping");
-  y = bodyText(y, "The Western four-element system (Fire, Earth, Air, Water) and the Chinese five-element system (Wood, Fire, Earth, Metal, Water) offer overlapping yet distinct perspectives on elemental energy:");
-
-  const elemMapRows: string[][] = [
-    ["Fire (Western)", "Fire (Chinese)", "Passion, energy, enthusiasm, action"],
-    ["Earth (Western)", "Earth (Chinese)", "Stability, practicality, material concerns"],
-    ["Air (Western)", "Metal (Chinese)", "Intellect, structure, precision, logic"],
-    ["Water (Western)", "Water (Chinese)", "Emotion, intuition, depth, flow"],
-    ["N/A", "Wood (Chinese)", "Growth, expansion, flexibility, vision"],
-  ];
-  y = styledTable(y, ["Western Element", "Chinese Element", "Shared Themes"], elemMapRows);
-
-  y = bodyText(y, `Your Western chart is dominated by ${dominantElement[0]} (${dominantElement[1]} placements). ${bazi ? `In your BaZi chart, ${bazi.data?.favorable_element || bazi.favorable_element || "your favorable element"} supports your growth.` : ""} The interplay between these systems reveals how your elemental energies manifest across different life dimensions.`);
-  y += 3;
-
-  // Personality convergence
-  y = subTitle(y, "Personality Convergence");
+  // Convergence themes
   if (convergence) {
     const cData = convergence.data ?? convergence;
     const themes = cData.themes || cData.convergence_themes || cData;
-    if (Array.isArray(themes)) {
-      for (const theme of themes) {
-        if (typeof theme === "string") {
-          y = bodyText(y, `\u2022 ${theme}`);
-        } else if (typeof theme === "object") {
-          y = bodyText(y, `\u2022 ${theme.theme || theme.name || ""}: ${theme.score != null ? `(${Math.round(Number(theme.score) * 100)}%) ` : ""}${theme.description || ""}`);
-        }
-      }
-    } else if (typeof themes === "object") {
+    if (typeof themes === "object" && !Array.isArray(themes)) {
+      y = sectionHead(y, "3. Convergence Themes");
       for (const [key, val] of Object.entries(themes)) {
         if (typeof val === "number") {
-          y = labelValue(y, `${key}:`, `${Math.round(val * 100)}%`);
+          y = bullet(y, `${key}: ${Math.round(val * 100)}%`);
         } else if (typeof val === "string") {
-          y = labelValue(y, `${key}:`, val);
+          y = bullet(y, `${key}: ${val}`);
         }
+      }
+    } else if (Array.isArray(themes)) {
+      y = sectionHead(y, "3. Convergence Themes");
+      for (const t of themes.slice(0, 6)) {
+        const text = typeof t === "string" ? t : `${t.theme || t.name || ""}: ${t.description || ""}`;
+        y = bullet(y, text);
       }
     }
   }
 
-  // Dynamic personality state
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Dynamic Personality State");
+  // Dynamic personality
   if (dynamicPersonality) {
-    const dpData = dynamicPersonality.data ?? dynamicPersonality;
-    if (dpData.dominant_traits) {
-      const traits = Array.isArray(dpData.dominant_traits)
-        ? dpData.dominant_traits.map((t: any) => typeof t === "string" ? t : t.trait || t.name).join(", ")
-        : String(dpData.dominant_traits);
-      y = labelValue(y, "Dominant Traits:", traits);
+    const dp = dynamicPersonality.data ?? dynamicPersonality;
+    y = sectionHead(y, "4. Dynamic State (Current)");
+    if (dp.dominant_traits) {
+      const traits = Array.isArray(dp.dominant_traits) ? dp.dominant_traits.map((t: any) => typeof t === "string" ? t : t.trait || t.name).join(", ") : String(dp.dominant_traits);
+      y = body(y, `Current dominant traits: ${traits}. ${dp.shadow_traits ? `Shadow: ${Array.isArray(dp.shadow_traits) ? dp.shadow_traits.map((t: any) => typeof t === "string" ? t : t.trait || t.name).join(", ") : dp.shadow_traits}.` : ""}`);
     }
-    if (dpData.shadow_traits) {
-      const shadows = Array.isArray(dpData.shadow_traits)
-        ? dpData.shadow_traits.map((t: any) => typeof t === "string" ? t : t.trait || t.name).join(", ")
-        : String(dpData.shadow_traits);
-      y = labelValue(y, "Shadow Traits:", shadows);
-    }
-    if (dpData.current_mood) y = labelValue(y, "Current Mood:", dpData.current_mood);
-    if (dpData.energy_level) y = labelValue(y, "Energy Level:", String(dpData.energy_level));
-    if (dpData.cognitive_style) y = labelValue(y, "Cognitive Style:", dpData.cognitive_style);
-    y = bodyText(y, "Your dynamic personality state represents how your natal potential is expressing right now, influenced by current planetary transits and progressions.");
-  } else {
-    y = italicText(y, "Dynamic personality data was not available.");
+    if (dp.current_mood) y = body(y, `Current energetic mood: ${dp.current_mood}. ${dp.energy_level ? `Energy level: ${dp.energy_level}.` : ""}`);
   }
 
-  // Element balance integration
-  y = ensureSpace(y, 30);
-  y = subTitle(y, "Integrated Element Balance");
-  if (elementBalance) {
-    const ebData = elementBalance.data ?? elementBalance;
-    const balance = ebData.elements || ebData.balance || ebData;
-    if (typeof balance === "object") {
-      const ebRows: string[][] = [];
-      for (const [elem, val] of Object.entries(balance)) {
-        if (typeof val === "number" || typeof val === "string") {
-          ebRows.push([elem, typeof val === "number" ? `${Math.round(Number(val))}%` : String(val)]);
-        } else if (typeof val === "object" && val) {
-          const v = val as any;
-          ebRows.push([elem, v.percentage != null ? `${Math.round(Number(v.percentage))}%` : v.count != null ? String(v.count) : "-"]);
-        }
-      }
-      if (ebRows.length > 0) {
-        y = styledTable(y, ["Element", "Balance"], ebRows);
-      }
-    }
-  }
+  // Core dynamic callout
+  y = calloutBox(y,
+    `\u2605 The Core Dynamic`,
+    `${firstName}'s chart is the story of a ${SIGN_ELEMENT[sunSign]} ${sunSign} identity channeled through ${moonSign} emotional intelligence, presented to the world through ${ascSign}'s lens. The ${mbtiType} cognitive style provides the mental framework, while Life Path ${lpSum} defines the overarching journey. ${domElement ? `The ${domElement[0]}-dominant element balance (${domElement[1]} planets) creates a consistent energetic signature` : "The elemental balance shapes the overall temperament"} that every system independently confirms.`,
+  );
 
-  // Overall narrative
-  y = ensureSpace(y, 40);
-  y = subTitle(y, "Overall Life Theme");
-  y = bodyText(y, `${profile.name}'s cosmic blueprint reveals a multifaceted individual whose ${sunSign} Sun provides core purpose through ${SIGN_ELEMENT[sunSign]} expression, whose ${moonSign} Moon nurtures through ${SIGN_ELEMENT[moonSign]} emotional processing, and whose ${ascSign} Ascendant presents a ${SIGN_ELEMENT[ascSign]} face to the world.`);
-  y = bodyText(y, `The convergence of ${mbtiType} cognitive style with ${enneagram?.data?.type || enneagram?.type ? `Enneagram Type ${enneagram.data?.type || enneagram.type}` : "your Enneagram type"} motivational patterns creates a personality engine that drives toward ${mbtiType.includes("NF") ? "meaning, authenticity, and human connection" : mbtiType.includes("NT") ? "knowledge, competence, and systemic understanding" : mbtiType.includes("SF") ? "practical service, harmony, and concrete care" : "efficient action, logical solutions, and measurable results"}.`);
-  y = bodyText(y, `The cross-system analysis reveals that your Western elemental balance (${dominantElement[0]}-dominant), Vedic karmic indicators, and Chinese Five Element profile ${bazi ? "align to suggest" : "together suggest"} a life path that integrates ${SIGN_ELEMENT[sunSign] === "Fire" ? "creative vision with grounded action" : SIGN_ELEMENT[sunSign] === "Earth" ? "material mastery with emotional depth" : SIGN_ELEMENT[sunSign] === "Air" ? "intellectual brilliance with embodied wisdom" : "intuitive knowing with structured expression"}. Your greatest growth comes from developing the qualities of your ${Object.entries(elemCount).sort((a, b) => a[1] - b[1])[0][0]} element, which is currently underrepresented in your chart.`);
+  // =======================================================================
+  // CLOSING PAGE
+  // =======================================================================
+  y = divider(y);
 
-  // =========================================================================
-  // APPENDIX: DISCLAIMER
-  // =========================================================================
-  newPage();
-  y = 25;
-  y = sectionTitle(y, "Appendix: Disclaimer");
-
-  y = bodyText(y, "This report is generated for informational and entertainment purposes only. Astrology, personality typology (MBTI, Enneagram), numerology, Tarot, BaZi, Nine Star Ki, and related systems are symbolic frameworks that provide metaphorical insight into human experience. They are not scientifically validated predictive tools.");
-  y += 3;
-  y = bodyText(y, "Nothing in this report should be taken as medical advice, psychological diagnosis, financial guidance, or a substitute for professional consultation. The health reading section uses traditional astrological symbolism and does not constitute a medical assessment.");
-  y += 3;
-  y = bodyText(y, "All data has been generated algorithmically based on the birth date, time, and location provided. The interpretations are based on astrological tradition and may not reflect your actual lived experience. Your free will and personal choices always supersede any chart indication.");
-  y += 3;
-  y = bodyText(y, "By using this report, you acknowledge that it is a tool for self-reflection and creative exploration, not a definitive description of your character, health, or destiny.");
-  y += 8;
-
-  // Signature
+  y = ensureSpace(y, 60);
   doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...GOLD);
-  doc.text("ENVI-OUS BRAIN", W / 2, y, { align: "center" });
-  y += 6;
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("times", "italic");
   doc.setTextColor(...MUTED);
-  doc.text("Comprehensive Natal Report Engine v1.0", W / 2, y, { align: "center" });
+  const closingLines = doc.splitTextToSize(
+    "This reading synthesizes Western tropical astrology, Vedic sidereal astrology, BaZi Chinese astrology, numerology, and psychological frameworks. Each system offers a different lens on the same soul. Where the lenses converge, the signal is strongest. Where they diverge, the complexity is richest.",
+    CW - 20,
+  );
+  for (const line of closingLines) {
+    y = ensureSpace(y, 5);
+    doc.text(line, W / 2, y, { align: "center" });
+    y += 5;
+  }
+
+  y += 8;
+  doc.setFontSize(14);
+  doc.setFont("times", "normal");
+  doc.setTextColor(...GOLD);
+  doc.text("\u2605  \u2605  \u2605", W / 2, y, { align: "center" });
+
+  y += 15;
+  doc.setFontSize(9);
+  doc.setFont("times", "normal");
+  doc.setTextColor(...MUTED);
+  const disc = doc.splitTextToSize(
+    "This report is generated for informational and entertainment purposes only. Astrology, numerology, and personality systems are symbolic frameworks for self-reflection, not scientifically validated predictive tools. Nothing here constitutes medical, psychological, or financial advice. Consult qualified professionals for health and life decisions.",
+    CW,
+  );
+  for (const line of disc) {
+    y = ensureSpace(y, 4.5);
+    doc.text(line, M, y);
+    y += 4.5;
+  }
+
   y += 5;
-  doc.text(`Generated ${new Date().toISOString()}`, W / 2, y, { align: "center" });
+  doc.setFontSize(8);
+  doc.text(`Generated ${new Date().toISOString().split("T")[0]} by ENVI-OUS BRAIN`, W / 2, y, { align: "center" });
 
-  // Bottom decoration
-  doc.setFillColor(...GOLD);
-  doc.rect(0, H - 3, W, 3, "F");
-
-  // =========================================================================
-  // DONE
-  // =========================================================================
-
+  // =======================================================================
   onProgress?.({ stage: "Complete!", percent: 100 });
-
   return doc.output("blob");
 }
