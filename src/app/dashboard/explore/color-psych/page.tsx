@@ -16,24 +16,23 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
-function ColorSwatch({ color, label }: { color: string; label?: string }) {
-  // Try to render as actual color swatch — the API returns color names not hex codes
-  const CSS_COLORS: Record<string, string> = {
-    red: "#ef4444", orange: "#f97316", yellow: "#eab308", green: "#22c55e",
-    blue: "#3b82f6", indigo: "#6366f1", violet: "#8b5cf6", purple: "#a855f7",
-    pink: "#ec4899", white: "#ffffff", black: "#000000", silver: "#c0c0c0",
-    gold: "#ffd700", teal: "#14b8a6", cyan: "#06b6d4", magenta: "#d946ef",
-    crimson: "#dc143c", navy: "#1e3a5f", emerald: "#10b981", amber: "#f59e0b",
-    coral: "#ff7f7f", maroon: "#800000", olive: "#808000", turquoise: "#40e0d0",
-    lavender: "#e6e6fa", ivory: "#fffff0", champagne: "#f7e7ce",
-    "deep blue": "#1e3a8a", "deep red": "#991b1b", "deep purple": "#581c87",
-    "deep green": "#166534", "bright red": "#ef4444", "bright blue": "#2563eb",
-    "forest green": "#14532d", "royal blue": "#2563eb", "burnt orange": "#c2410c",
-    "rose gold": "#b76e79", cobalt: "#0047ab", sapphire: "#0f52ba",
-    burgundy: "#800020", copper: "#b87333", bronze: "#cd7f32",
-  };
+// The API returns colors as {name, hex_code} objects or plain strings
+interface ColorObj {
+  name: string;
+  hex_code: string;
+}
 
-  const hex = CSS_COLORS[color.toLowerCase()] ?? color;
+function parseColor(c: unknown): { name: string; hex: string } {
+  if (typeof c === "string") return { name: c, hex: "" };
+  if (c && typeof c === "object" && "name" in c) {
+    const obj = c as ColorObj;
+    return { name: obj.name, hex: obj.hex_code ?? "" };
+  }
+  return { name: String(c), hex: "" };
+}
+
+function ColorSwatch({ color, label }: { color: unknown; label?: string }) {
+  const { name, hex } = parseColor(color);
   const isHex = hex.startsWith("#");
 
   return (
@@ -49,7 +48,7 @@ function ColorSwatch({ color, label }: { color: string; label?: string }) {
         </div>
       )}
       <div>
-        <p className="text-sm font-medium text-text-primary capitalize">{color}</p>
+        <p className="text-sm font-medium text-text-primary capitalize">{name}</p>
         {label ? <p className="text-xs text-text-muted">{label}</p> : null}
       </div>
     </div>
@@ -134,13 +133,13 @@ export default function ColorPsychPage() {
     );
   }
 
-  const primaryColor = data?.primary_color as string | undefined;
-  const secondaryColors = data?.secondary_colors as string[] | undefined;
-  const accentColor = data?.accent_color as string | undefined;
-  const powerColor = data?.power_color as string | undefined;
-  const colorsToAvoid = data?.colors_to_avoid as string[] | undefined;
-  const elementPalette = data?.element_palette as string | undefined;
-  const baziColors = data?.bazi_colors as Record<string, unknown> | undefined;
+  const primaryColor = data?.primary_color;
+  const secondaryColors = data?.secondary_colors as unknown[] | undefined;
+  const accentColor = data?.accent_color;
+  const powerColor = data?.power_color;
+  const colorsToAvoid = data?.colors_to_avoid as unknown[] | undefined;
+  const elementPalette = data?.element_palette as unknown[] | unknown | undefined;
+  const baziColors = data?.bazi_colors as unknown[] | Record<string, unknown> | undefined;
   const seasonType = data?.season_type as string | undefined;
   const dominantElement = data?.dominant_element as string | undefined;
 
@@ -219,14 +218,22 @@ export default function ColorPsychPage() {
           ) : null}
 
           {/* Element palette */}
-          {elementPalette ? (
+          {elementPalette && Array.isArray(elementPalette) && elementPalette.length > 0 ? (
+            <Card title="Element Palette">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {elementPalette.map((c, i) => (
+                  <ColorSwatch key={i} color={c} />
+                ))}
+              </div>
+            </Card>
+          ) : elementPalette && typeof elementPalette === "string" ? (
             <Card title="Element Palette">
               <p className="text-sm text-text-secondary capitalize">{elementPalette}</p>
             </Card>
           ) : null}
 
           {/* BaZi colors if present */}
-          {baziColors ? (
+          {baziColors && !Array.isArray(baziColors) && typeof baziColors === "object" && Object.keys(baziColors).length > 0 ? (
             <Card title="BaZi Colors">
               <div className="space-y-2">
                 {Object.entries(baziColors).map(([key, value]) => (

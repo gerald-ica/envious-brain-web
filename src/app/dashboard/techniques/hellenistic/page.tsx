@@ -51,7 +51,7 @@ export default function HellenisticPage() {
           if (status === 404) {
             setError("Hellenistic endpoints are not yet deployed.");
           } else if (status === 422) {
-            setError("Invalid request — check your birth profile data.");
+            setError("Hellenistic analysis requires a backend update that is pending deployment. Check back soon.");
           } else {
             setError("Failed to load Hellenistic data. Check API connection.");
           }
