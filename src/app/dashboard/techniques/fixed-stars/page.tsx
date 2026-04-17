@@ -7,14 +7,33 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/loading";
+import { motion } from "framer-motion";
+import { Star } from "lucide-react";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
+const fadeUp = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+};
+
+interface StarConjunction {
+  star: string;
+  planet: string;
+  star_longitude: number;
+  planet_longitude: number;
+  orb: number;
+  star_nature: string;
+  star_keywords: string[];
+  star_magnitude: number;
+}
+
 export default function FixedStarsPage() {
   const { activeProfile } = useProfile();
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [conjunctions, setConjunctions] = useState<StarConjunction[]>([]);
+  const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +43,8 @@ export default function FixedStarsPage() {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setConjunctions([]);
+      setCount(null);
       try {
         const res = await fetch(`${API_URL}/api/v1/western/fixed-stars`, {
           method: "POST",
@@ -34,15 +55,44 @@ export default function FixedStarsPage() {
             longitude: activeProfile.lon,
           }),
         });
+
         if (res.status === 404) {
           if (!cancelled) setError("Fixed stars endpoint is not yet deployed.");
           return;
         }
+
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error((body as Record<string, unknown>).detail as string ?? `API error ${res.status}`);
         }
-        if (!cancelled) setData(await res.json());
+
+        const json = await res.json();
+        // Handle both wrapped and unwrapped responses
+        const data = json.data ?? json;
+        const rawConjunctions = data.conjunctions ?? data.fixed_stars ?? [];
+
+        if (!cancelled) {
+          const items = (Array.isArray(rawConjunctions) ? rawConjunctions : []).map(
+            (c: Record<string, unknown>) => ({
+              star: String(c.star ?? c.star_name ?? ""),
+              planet: String(c.planet ?? c.natal_planet ?? ""),
+              star_longitude: Number(c.star_longitude ?? 0),
+              planet_longitude: Number(c.planet_longitude ?? 0),
+              orb: Number(c.orb ?? 0),
+              star_nature: String(c.star_nature ?? c.nature ?? ""),
+              star_keywords: Array.isArray(c.star_keywords)
+                ? (c.star_keywords as string[])
+                : Array.isArray(c.keywords)
+                  ? (c.keywords as string[])
+                  : typeof c.star_keywords === "string"
+                    ? (c.star_keywords as string).split(",").map((s: string) => s.trim())
+                    : [],
+              star_magnitude: Number(c.star_magnitude ?? c.magnitude ?? 0),
+            })
+          );
+          setConjunctions(items);
+          setCount(typeof data.count === "number" ? data.count : items.length);
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load fixed stars");
       } finally {
@@ -64,22 +114,23 @@ export default function FixedStarsPage() {
     );
   }
 
-  // API returns { conjunctions: [{ star, planet, star_longitude, planet_longitude, orb, star_nature, star_keywords, star_magnitude }, ...], count: N }
-  const conjunctions = data?.conjunctions as Array<Record<string, unknown>> | undefined;
-  const count = data?.count as number | undefined;
-
   return (
     <div className="mx-auto max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Fixed Stars for {activeProfile.name}</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Major fixed star conjunctions with natal planets{count != null ? ` — ${count} found` : ""}
-        </p>
+        <div className="flex items-center gap-3">
+          <Star size={24} className="text-amber-400" />
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">Fixed Stars for {activeProfile.name}</h1>
+            <p className="mt-1 text-sm text-text-muted">
+              Major fixed star conjunctions with natal planets{count != null ? ` — ${count} found` : ""}
+            </p>
+          </div>
+        </div>
       </div>
 
       {loading && (
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (<Skeleton key={i} className="h-10 w-full rounded" />))}
+          {Array.from({ length: 5 }).map((_, i) => (<Skeleton key={i} className="h-12 w-full rounded-lg" />))}
         </div>
       )}
 
@@ -89,9 +140,9 @@ export default function FixedStarsPage() {
         </div>
       )}
 
-      {data && !loading && (
-        <div className="animate-fade-in space-y-6">
-          {conjunctions && conjunctions.length > 0 ? (
+      {!loading && !error && (
+        <motion.div initial="initial" animate="animate" variants={{ animate: { transition: { staggerChildren: 0.05 } } }} className="space-y-6">
+          {conjunctions.length > 0 ? (
             <Card title="Star Conjunctions">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -107,30 +158,30 @@ export default function FixedStarsPage() {
                   </thead>
                   <tbody>
                     {conjunctions.map((c, i) => (
-                      <tr key={i} className="border-b border-border/50 last:border-0">
-                        <td className="py-2.5 pr-4 font-medium text-text-primary">{String(c.star ?? "")}</td>
-                        <td className="py-2.5 pr-4 text-text-secondary">{String(c.planet ?? "")}</td>
-                        <td className="py-2.5 pr-4 font-mono text-text-secondary">
-                          {typeof c.orb === "number" ? `${(c.orb as number).toFixed(2)}°` : String(c.orb ?? "")}
-                        </td>
-                        <td className="py-2.5 pr-4 text-text-secondary">
-                          {typeof c.star_magnitude === "number" ? (c.star_magnitude as number).toFixed(2) : String(c.star_magnitude ?? c.magnitude ?? "")}
-                        </td>
+                      <motion.tr
+                        key={`${c.star}-${c.planet}-${i}`}
+                        variants={fadeUp}
+                        className="border-b border-border/50 last:border-0"
+                      >
+                        <td className="py-2.5 pr-4 font-medium text-text-primary">{c.star}</td>
+                        <td className="py-2.5 pr-4 text-text-secondary">{c.planet}</td>
+                        <td className="py-2.5 pr-4 font-mono text-text-secondary">{c.orb.toFixed(2)}°</td>
+                        <td className="py-2.5 pr-4 text-text-secondary">{c.star_magnitude.toFixed(2)}</td>
                         <td className="py-2.5 pr-4">
                           {c.star_nature ? (
-                            <Badge variant="info">{String(c.star_nature)}</Badge>
+                            <Badge variant="info">{c.star_nature}</Badge>
                           ) : <span className="text-text-muted">—</span>}
                         </td>
                         <td className="py-2.5">
-                          {Array.isArray(c.star_keywords) && c.star_keywords.length > 0 ? (
+                          {c.star_keywords.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                              {(c.star_keywords as string[]).map((kw) => (
+                              {c.star_keywords.map((kw) => (
                                 <Badge key={kw} variant="neutral">{kw}</Badge>
                               ))}
                             </div>
                           ) : <span className="text-text-muted">—</span>}
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
                   </tbody>
                 </table>
@@ -141,7 +192,7 @@ export default function FixedStarsPage() {
               <p className="text-sm text-text-muted">No fixed star conjunctions found within the standard orb for this chart.</p>
             </Card>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );
