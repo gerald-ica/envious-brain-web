@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CitySearch } from "@/components/ui/city-search";
+import { PdfExportButton } from "@/components/export/pdf-export-button";
 
 // ---------------------------------------------------------------------------
 // Types & Constants
@@ -645,6 +646,7 @@ export default function SettingsPage() {
         <h2 className="mb-4 text-lg font-semibold text-text-primary">Export</h2>
         <Card>
           <div className="flex flex-wrap gap-3">
+            <PdfExportButton />
             <Button variant="secondary" onClick={handleExportProfiles}>
               Export All Profiles (JSON)
             </Button>
@@ -653,7 +655,7 @@ export default function SettingsPage() {
             </Button>
           </div>
           <p className="mt-3 text-xs text-text-muted">
-            Download your profiles and settings as JSON files for backup or transfer.
+            Export a comprehensive natal report as PDF, or download profiles and settings as JSON.
           </p>
         </Card>
       </section>
