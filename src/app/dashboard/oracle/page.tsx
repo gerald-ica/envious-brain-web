@@ -388,9 +388,9 @@ export default function OraclePage() {
         setBackendSessionId(sid);
       }
 
-      // Send message
+      // Send message and get LLM completion
       const msgRes = await fetch(
-        `${API_URL}/api/v1/llm/sessions/${sid}/messages`,
+        `${API_URL}/api/v1/llm/sessions/${sid}/complete`,
         {
           method: "POST",
           headers,
