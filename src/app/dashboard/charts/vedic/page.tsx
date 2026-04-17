@@ -22,8 +22,11 @@ const API_URL =
 
 interface VedicPlanet {
   sign?: string;
+  rashi?: string;
   longitude?: number;
+  sidereal_longitude?: number;
   degree?: number;
+  degree_in_rashi?: number;
   nakshatra?: string;
   pada?: number;
   nakshatra_lord?: string;
@@ -283,9 +286,9 @@ export default function VedicPage() {
                         <td className="py-2.5 pr-4 font-medium text-text-primary">
                           {p.retrograde ? `${planet} (R)` : planet}
                         </td>
-                        <td className="py-2.5 pr-4 text-text-secondary">{p.sign ?? "-"}</td>
+                        <td className="py-2.5 pr-4 text-text-secondary">{p.rashi ?? p.sign ?? "-"}</td>
                         <td className="py-2.5 pr-4 font-mono text-text-secondary">
-                          {formatDegV(p.degree ?? p.longitude)}
+                          {formatDegV(p.degree_in_rashi ?? p.degree ?? p.sidereal_longitude ?? p.longitude)}
                         </td>
                         <td className="py-2.5 pr-4 text-accent-purple">{p.nakshatra ?? "-"}</td>
                         <td className="py-2.5 pr-4 text-text-muted">{p.pada ?? "-"}</td>
