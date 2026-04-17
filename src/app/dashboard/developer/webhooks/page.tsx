@@ -253,7 +253,10 @@ export default function WebhooksPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Webhooks</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-text-primary">Webhooks</h1>
+            <Badge variant="info">Coming Soon</Badge>
+          </div>
           <p className="text-sm text-text-muted">
             Receive real-time notifications for events in your ENVI-OUS BRAIN account
           </p>
@@ -262,6 +265,13 @@ export default function WebhooksPage() {
           {showForm ? "Cancel" : "+ Register Webhook"}
         </Button>
       </div>
+
+      {/* Coming Soon Notice */}
+      <Card className="mb-6">
+        <p className="text-sm text-text-secondary text-center py-2">
+          Webhook delivery is under active development. The data shown below is sample data for preview purposes.
+        </p>
+      </Card>
 
       {/* Register Form */}
       {showForm && (

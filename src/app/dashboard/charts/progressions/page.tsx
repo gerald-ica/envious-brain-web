@@ -37,7 +37,14 @@ export default function ProgressionsPage() {
       setData(res.data);
     } catch (err) {
       console.error("Progressions API error:", err);
-      setError("Failed to load progressions. Check API connection.");
+      const status = (err as { status?: number }).status;
+      if (status === 404) {
+        setError("Progressions endpoint is not yet deployed.");
+      } else if (status === 422) {
+        setError("Invalid request — check your birth profile data.");
+      } else {
+        setError("Failed to load progressions. Check API connection.");
+      }
     } finally {
       setLoading(false);
     }

@@ -46,7 +46,14 @@ export default function DignitiesPage() {
       .then((res) => setData(res.data))
       .catch((err) => {
         console.error("Dignities API error:", err);
-        setError("Failed to load dignities. Check API connection.");
+        const status = (err as { status?: number }).status;
+        if (status === 404) {
+          setError("Dignities endpoint is not yet deployed.");
+        } else if (status === 422) {
+          setError("Invalid request — check your birth profile data.");
+        } else {
+          setError("Failed to load dignities. Check API connection.");
+        }
       })
       .finally(() => setLoading(false));
   }, [activeProfile]);

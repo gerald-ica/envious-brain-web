@@ -41,7 +41,14 @@ export default function DraconicChartPage() {
       .then((res) => setData(res.data))
       .catch((err) => {
         console.error("Draconic API error:", err);
-        setError("Failed to load draconic chart. Check API connection.");
+        const status = (err as { status?: number }).status;
+        if (status === 404) {
+          setError("Draconic chart endpoint is not yet deployed.");
+        } else if (status === 422) {
+          setError("Invalid request — check your birth profile data.");
+        } else {
+          setError("Failed to load draconic chart. Check API connection.");
+        }
       })
       .finally(() => setLoading(false));
   }, [activeProfile]);

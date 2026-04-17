@@ -1,274 +1,107 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/loading";
 
-// ---- Mock Data ----
+// ---------------------------------------------------------------------------
+// Jungian Archetypes — first get chart for signs, then call archetypes API
+// ---------------------------------------------------------------------------
 
-const PRIMARY_ARCHETYPE = {
-  name: "The Alchemist",
-  category: "Transformation",
-  description:
-    "The Alchemist archetype embodies the power of transmutation -- turning lead into gold, chaos into order, and pain into wisdom. You are driven by the pursuit of fundamental truths and the transformation of consciousness itself.",
-  traits: [
-    "Visionary transformation",
-    "Deep pattern recognition",
-    "Synthesis of opposites",
-    "Catalytic influence on others",
-  ],
-  expression:
-    "Your Alchemist manifests through an insatiable drive to understand systems at their deepest level and transform them. You see potential where others see limitation.",
-};
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
-const SHADOW_ARCHETYPE = {
-  name: "The Manipulator",
-  category: "Shadow",
-  description:
-    "The shadow of the Alchemist is the Manipulator -- one who uses knowledge of transformation to control others rather than liberate them. This shadow emerges when the desire for power overrides the commitment to truth.",
-  traits: [
-    "Covert control through knowledge",
-    "Intellectual superiority",
-    "Withholding information as power",
-    "Using insight to exploit vulnerability",
-  ],
-  integration:
-    "Integrate this shadow by noticing when your desire to transform becomes a desire to control. Ask: am I serving the transformation or serving my ego?",
-};
-
-const PERSONA_ARCHETYPE = {
-  name: "The Sage",
-  category: "Persona",
-  description:
-    "Your social mask is the Sage -- the wise advisor who shares knowledge freely. This is how you present to the world: measured, knowledgeable, and composed. The Sage persona protects the deeper Alchemist work.",
-  traits: [
-    "Calm authority",
-    "Analytical composure",
-    "Teaching and mentoring",
-    "Intellectual accessibility",
-  ],
-};
-
-const ALL_ARCHETYPES = [
-  { name: "Innocent", angle: 0, active: false },
-  { name: "Sage", angle: 30, active: true },
-  { name: "Explorer", angle: 60, active: false },
-  { name: "Ruler", angle: 90, active: false },
-  { name: "Creator", angle: 120, active: false },
-  { name: "Caregiver", angle: 150, active: false },
-  { name: "Magician", angle: 180, active: true },
-  { name: "Hero", angle: 210, active: false },
-  { name: "Rebel", angle: 240, active: false },
-  { name: "Lover", angle: 270, active: false },
-  { name: "Jester", angle: 300, active: false },
-  { name: "Orphan", angle: 330, active: false },
-];
-
-const INDIVIDUATION_STAGES = [
-  { name: "Persona Recognition", status: "complete", description: "Identifying the social masks we wear" },
-  { name: "Shadow Encounter", status: "complete", description: "Confronting the denied aspects of self" },
-  { name: "Anima/Animus Integration", status: "active", description: "Integrating the contrasexual archetype" },
-  { name: "Self Realization", status: "upcoming", description: "Achieving wholeness through integration of all aspects" },
-];
-
-// ---- Archetype Wheel Component ----
-
-function ArchetypeWheel() {
-  const radius = 130;
-  const centerX = 160;
-  const centerY = 160;
-
+function StrengthBar({ label, value, max }: { label: string; value: number; max: number }) {
+  const pct = max === 0 ? 0 : Math.round((value / max) * 100);
   return (
-    <div className="flex justify-center py-4">
-      <svg
-        width="320"
-        height="320"
-        viewBox="0 0 320 320"
-        className="overflow-visible"
-      >
-        {/* Outer circle */}
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={radius}
-          fill="none"
-          stroke="rgba(59, 130, 246, 0.15)"
-          strokeWidth="1"
-        />
-        {/* Inner circle */}
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={40}
-          fill="rgba(59, 130, 246, 0.05)"
-          stroke="rgba(59, 130, 246, 0.2)"
-          strokeWidth="1"
-        />
-        {/* Center text */}
-        <text
-          x={centerX}
-          y={centerY - 4}
-          textAnchor="middle"
-          fill="#3b82f6"
-          fontSize="10"
-          fontWeight="bold"
-        >
-          SELF
-        </text>
-        <text
-          x={centerX}
-          y={centerY + 10}
-          textAnchor="middle"
-          fill="#6b7280"
-          fontSize="8"
-        >
-          Individuation
-        </text>
-
-        {/* Connecting lines */}
-        {ALL_ARCHETYPES.map((arch) => {
-          const radian = (arch.angle - 90) * (Math.PI / 180);
-          const x = centerX + radius * Math.cos(radian);
-          const y = centerY + radius * Math.sin(radian);
-          return (
-            <line
-              key={`line-${arch.name}`}
-              x1={centerX}
-              y1={centerY}
-              x2={x}
-              y2={y}
-              stroke={
-                arch.active
-                  ? "rgba(59, 130, 246, 0.3)"
-                  : "rgba(255, 255, 255, 0.05)"
-              }
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Archetype nodes */}
-        {ALL_ARCHETYPES.map((arch) => {
-          const radian = (arch.angle - 90) * (Math.PI / 180);
-          const x = centerX + radius * Math.cos(radian);
-          const y = centerY + radius * Math.sin(radian);
-          const labelRadius = radius + 20;
-          const lx = centerX + labelRadius * Math.cos(radian);
-          const ly = centerY + labelRadius * Math.sin(radian);
-
-          return (
-            <g key={arch.name}>
-              <circle
-                cx={x}
-                cy={y}
-                r={arch.active ? 8 : 5}
-                fill={
-                  arch.active
-                    ? "rgba(59, 130, 246, 0.3)"
-                    : "rgba(255, 255, 255, 0.1)"
-                }
-                stroke={arch.active ? "#3b82f6" : "rgba(255, 255, 255, 0.2)"}
-                strokeWidth={arch.active ? 2 : 1}
-              />
-              <text
-                x={lx}
-                y={ly + 4}
-                textAnchor="middle"
-                fill={arch.active ? "#3b82f6" : "#6b7280"}
-                fontSize="9"
-                fontWeight={arch.active ? "bold" : "normal"}
-              >
-                {arch.name}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+    <div className="flex items-center gap-3">
+      <span className="w-24 text-xs text-text-muted truncate">{label}</span>
+      <div className="flex-1 h-2.5 rounded-full bg-white/5 overflow-hidden">
+        <div className="h-full rounded-full bg-accent-purple" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-10 text-right text-xs font-mono text-text-secondary">
+        {(value * 100).toFixed(0)}%
+      </span>
     </div>
   );
 }
 
-// ---- Archetype Card Component ----
-
-function ArchetypeCard({
-  name,
-  category,
-  description,
-  traits,
-  accentColor,
-  extra,
-}: {
-  name: string;
-  category: string;
-  description: string;
-  traits: string[];
-  accentColor: string;
-  extra?: string;
-}) {
-  const borderColor =
-    accentColor === "blue"
-      ? "border-accent-blue/30"
-      : accentColor === "rose"
-        ? "border-accent-rose/30"
-        : "border-accent-purple/30";
-  const textColor =
-    accentColor === "blue"
-      ? "text-accent-blue"
-      : accentColor === "rose"
-        ? "text-accent-rose"
-        : "text-accent-purple";
-  const badgeVariant =
-    accentColor === "blue"
-      ? "info"
-      : accentColor === "rose"
-        ? "error"
-        : "neutral";
-
-  return (
-    <Card
-      glow={accentColor === "blue" ? "blue" : accentColor === "rose" ? "none" : "purple"}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`text-lg font-bold ${textColor}`}>{name}</span>
-        <Badge variant={badgeVariant as "info" | "error" | "neutral"}>
-          {category}
-        </Badge>
-      </div>
-      <p className="text-sm leading-relaxed text-text-secondary mb-3">
-        {description}
-      </p>
-      <div className={`rounded-lg border ${borderColor} bg-white/[0.02] p-3`}>
-        <p className="text-xs text-text-muted mb-2">Key Traits</p>
-        <div className="flex flex-wrap gap-1.5">
-          {traits.map((trait) => (
-            <Badge key={trait} variant="neutral">
-              {trait}
-            </Badge>
-          ))}
-        </div>
-      </div>
-      {extra && (
-        <p className="mt-3 text-xs leading-relaxed text-text-muted italic">
-          {extra}
-        </p>
-      )}
-    </Card>
-  );
-}
-
-// ---- Page ----
-
 export default function ArchetypesPage() {
   const { activeProfile } = useProfile();
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeProfile) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Step 1: Get western chart for Sun/Moon/Ascendant signs
+        const datetime = `${activeProfile.birthDate}T${activeProfile.birthTime}:00`;
+        const chartRes = await fetch(`${API_URL}/api/v1/charts/western`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            datetime,
+            latitude: activeProfile.lat,
+            longitude: activeProfile.lon,
+            timezone: activeProfile.timezone,
+          }),
+        });
+
+        let sunSign = "Aries";
+        let moonSign = "Aries";
+        let ascSign = "Aries";
+
+        if (chartRes.ok) {
+          const chart = await chartRes.json();
+          const positions = chart.positions as Record<string, Record<string, string>> | undefined;
+          if (positions) {
+            sunSign = positions.Sun?.sign ?? sunSign;
+            moonSign = positions.Moon?.sign ?? moonSign;
+            // Ascendant from house 1
+            const houses = chart.houses as Array<Record<string, unknown>> | undefined;
+            if (houses && houses[0]) {
+              ascSign = (houses[0].sign as string) ?? ascSign;
+            }
+          }
+        }
+
+        // Step 2: Get archetypes
+        const archRes = await fetch(`${API_URL}/api/v1/psychology/jungian-archetypes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sun_sign: sunSign,
+            moon_sign: moonSign,
+            ascendant: ascSign,
+          }),
+        });
+        if (!archRes.ok) throw new Error(`Archetypes API error: ${archRes.status}`);
+        setData(await archRes.json());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load archetypes");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [activeProfile]);
 
   if (!activeProfile) {
     return (
       <div className="mx-auto max-w-3xl p-6">
         <Card title="No Profile Selected">
           <p className="text-text-secondary mb-4">
-            Create a birth profile to view your Jungian archetypes.
+            Create a birth profile to discover your Jungian archetypes.
           </p>
           <Link href="/dashboard/settings">
             <Button>Go to Settings</Button>
@@ -278,114 +111,91 @@ export default function ArchetypesPage() {
     );
   }
 
+  const primary = data?.primary as string | undefined;
+  const secondary = data?.secondary as string | undefined;
+  const shadow = data?.shadow as string | undefined;
+  const scores = data?.scores as Record<string, number> | undefined;
+  const orientation = data?.orientation as string | undefined;
+  const growthPath = data?.growth_path as string[] | undefined;
+
+  const maxScore = scores ? Math.max(...Object.values(scores), 1) : 1;
+
   return (
     <div className="mx-auto max-w-7xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-bold text-text-primary">
-            Archetypes for {activeProfile.name}
-          </h1>
-          <Badge variant="info">Alchemist</Badge>
-        </div>
-        <p className="text-sm text-text-muted">
-          Archetypal analysis based on the collective unconscious -- primary,
-          shadow, and persona identification with individuation tracking.
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-text-primary">
+          Jungian Archetypes for {activeProfile.name}
+        </h1>
+        <p className="mt-1 text-sm text-text-muted">
+          Archetypal patterns derived from your natal chart
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Primary Archetype */}
-        <ArchetypeCard
-          name={PRIMARY_ARCHETYPE.name}
-          category={PRIMARY_ARCHETYPE.category}
-          description={PRIMARY_ARCHETYPE.description}
-          traits={PRIMARY_ARCHETYPE.traits}
-          accentColor="blue"
-          extra={PRIMARY_ARCHETYPE.expression}
-        />
+      {loading && (
+        <div className="flex justify-center py-12">
+          <Spinner className="h-8 w-8" />
+        </div>
+      )}
 
-        {/* Shadow Archetype */}
-        <ArchetypeCard
-          name={SHADOW_ARCHETYPE.name}
-          category={SHADOW_ARCHETYPE.category}
-          description={SHADOW_ARCHETYPE.description}
-          traits={SHADOW_ARCHETYPE.traits}
-          accentColor="rose"
-          extra={SHADOW_ARCHETYPE.integration}
-        />
+      {error && (
+        <div className="mb-4 rounded-lg border border-accent-rose/30 bg-accent-rose/10 px-4 py-2.5 text-sm text-accent-rose">
+          {error}
+        </div>
+      )}
 
-        {/* Persona Archetype */}
-        <ArchetypeCard
-          name={PERSONA_ARCHETYPE.name}
-          category={PERSONA_ARCHETYPE.category}
-          description={PERSONA_ARCHETYPE.description}
-          traits={PERSONA_ARCHETYPE.traits}
-          accentColor="purple"
-        />
+      {data && !loading && (
+        <div className="animate-fade-in space-y-6">
+          {/* Primary / Secondary / Shadow */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card title="Primary Archetype" glow="purple">
+              <p className="text-2xl font-bold text-accent-purple">{primary ?? "--"}</p>
+              {orientation ? (
+                <Badge variant="info" className="mt-2">{orientation}</Badge>
+              ) : null}
+            </Card>
+            <Card title="Secondary Archetype">
+              <p className="text-2xl font-bold text-text-primary">{secondary ?? "--"}</p>
+            </Card>
+            <Card title="Shadow Archetype">
+              <p className="text-2xl font-bold text-accent-rose">{shadow ?? "--"}</p>
+            </Card>
+          </div>
 
-        {/* Individuation Stage */}
-        <Card title="Individuation Journey" glow="purple">
-          <div className="space-y-3">
-            {INDIVIDUATION_STAGES.map((stage, i) => {
-              const dotColor =
-                stage.status === "complete"
-                  ? "bg-accent-emerald"
-                  : stage.status === "active"
-                    ? "bg-accent-blue"
-                    : "bg-white/20";
-              const lineColor =
-                stage.status === "complete"
-                  ? "bg-accent-emerald/30"
-                  : "bg-white/10";
-
-              return (
-                <div key={stage.name} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`h-3 w-3 rounded-full ${dotColor} ${stage.status === "active" ? "ring-2 ring-accent-blue/30" : ""}`}
+          {/* Scores */}
+          {scores && (
+            <Card title="Archetype Scores">
+              <div className="space-y-3">
+                {Object.entries(scores)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([archetype, score]) => (
+                    <StrengthBar
+                      key={archetype}
+                      label={archetype}
+                      value={score}
+                      max={maxScore}
                     />
-                    {i < INDIVIDUATION_STAGES.length - 1 && (
-                      <div className={`w-0.5 flex-1 ${lineColor}`} />
-                    )}
-                  </div>
-                  <div className="pb-4">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-medium text-text-primary">
-                        {stage.name}
-                      </span>
-                      {stage.status === "active" && (
-                        <Badge variant="info">Current</Badge>
-                      )}
-                      {stage.status === "complete" && (
-                        <Badge variant="healthy">Complete</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-text-secondary">
-                      {stage.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
+                  ))}
+              </div>
+            </Card>
+          )}
 
-        {/* Archetype Wheel */}
-        <Card title="Archetype Wheel" className="lg:col-span-2">
-          <ArchetypeWheel />
-          <div className="flex justify-center gap-6 mt-2 text-xs text-text-muted">
-            <div className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-full bg-accent-blue" />
-              Active archetypes
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-full bg-white/10 border border-white/20" />
-              Latent archetypes
-            </div>
-          </div>
-        </Card>
-      </div>
+          {/* Growth path */}
+          {growthPath && growthPath.length > 0 ? (
+            <Card title="Growth Path">
+              <div className="space-y-3">
+                {growthPath.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-emerald/15 text-xs font-bold text-accent-emerald">
+                      {i + 1}
+                    </span>
+                    <p className="text-sm text-text-secondary">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

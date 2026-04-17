@@ -45,6 +45,36 @@ const exploreSystems = [
       "Current Kp index, solar wind speed, solar flare alerts, and geomagnetic storm status with personality correlation notes.",
     icon: "\u2600",
   },
+  {
+    title: "Nine Star Ki",
+    subtitle: "Japanese Numerology",
+    href: "/dashboard/explore/nine-star-ki",
+    badge: "Eastern",
+    badgeVariant: "info" as const,
+    description:
+      "Nine Star Ki energy mapping based on birth date. Natal star, character star, and energetic star with directional guidance.",
+    icon: "\u2726",
+  },
+  {
+    title: "Color Psychology",
+    subtitle: "Astrological Color Palette",
+    href: "/dashboard/explore/color-psych",
+    badge: "Visual",
+    badgeVariant: "neutral" as const,
+    description:
+      "Personal color palette derived from your Sun, Moon, and Rising signs. Includes complementary and accent colors.",
+    icon: "\u25CF",
+  },
+  {
+    title: "Spirit Animal",
+    subtitle: "Totem Guide",
+    href: "/dashboard/explore/spirit-animal",
+    badge: "Shamanic",
+    badgeVariant: "neutral" as const,
+    description:
+      "Discover your spirit animal totem based on astrological and personality factors. Power animal traits and guidance messages.",
+    icon: "\u2042",
+  },
 ];
 
 export default function ExploreIndexPage() {

@@ -41,7 +41,14 @@ export default function ArabicPartsPage() {
       .then((res) => setData(res.data))
       .catch((err) => {
         console.error("Arabic Parts API error:", err);
-        setError("Failed to load Arabic Parts. Check API connection.");
+        const status = (err as { status?: number }).status;
+        if (status === 404) {
+          setError("Arabic Parts endpoint is not yet deployed.");
+        } else if (status === 422) {
+          setError("Invalid request — check your birth profile data.");
+        } else {
+          setError("Failed to load Arabic Parts. Check API connection.");
+        }
       })
       .finally(() => setLoading(false));
   }, [activeProfile]);

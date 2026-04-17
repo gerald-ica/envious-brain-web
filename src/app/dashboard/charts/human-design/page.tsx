@@ -170,31 +170,47 @@ export default function HumanDesignPage() {
   ) => {
     setLoading(true);
     setStatus("loading");
-    try {
-      const t = time || "12:00";
-      const res = await fetch(`${API_URL}/api/v1/human-design/chart`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          datetime: `${date}T${t}:00`,
-          latitude: lat,
-          longitude: lon,
-          timezone: tz,
-        }),
-      });
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      const json = (await res.json()) as HDResponse;
-      setData(json);
-      setStatus("live");
-      setCalculated(true);
-    } catch (err) {
-      console.warn("Human Design API unavailable, using sample data:", err);
-      setData(null);
-      setStatus("fallback");
-      setCalculated(true);
-    } finally {
-      setLoading(false);
+    const t = time || "12:00";
+    const payload = {
+      datetime: `${date}T${t}:00`,
+      latitude: lat,
+      longitude: lon,
+      timezone: tz,
+    };
+
+    // Try primary endpoint first, then legacy path
+    const urls = [
+      `${API_URL}/api/v1/charts/human-design`,
+      `${API_URL}/api/v1/human-design/chart`,
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.status === 404) continue; // try next URL
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const json = (await res.json()) as HDResponse;
+        setData(json);
+        setStatus("live");
+        setCalculated(true);
+        setLoading(false);
+        return;
+      } catch (err) {
+        if (url === urls[urls.length - 1]) {
+          console.warn("Human Design API unavailable, using sample data:", err);
+        }
+      }
     }
+
+    // Both URLs failed or returned 404
+    setData(null);
+    setStatus("fallback");
+    setCalculated(true);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -256,6 +272,12 @@ export default function HumanDesignPage() {
           <StatusIndicator status={status} />
         </div>
       </div>
+
+      {status === "fallback" && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-3 text-sm text-accent-amber">
+          Human Design chart calculations will be available after the next backend deployment. Showing sample data below.
+        </div>
+      )}
 
       {/* Birth Data Form */}
       <Card title="Birth Data" className="mb-6">

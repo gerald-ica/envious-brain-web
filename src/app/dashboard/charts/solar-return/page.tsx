@@ -35,7 +35,14 @@ export default function SolarReturnPage() {
       setData(res.data);
     } catch (err) {
       console.error("Solar return API error:", err);
-      setError("Failed to load solar return chart. Check API connection.");
+      const status = (err as { status?: number }).status;
+      if (status === 404) {
+        setError("Solar return endpoint is not yet deployed.");
+      } else if (status === 422) {
+        setError("Invalid request — check your birth profile data.");
+      } else {
+        setError("Failed to load solar return chart. Check API connection.");
+      }
     } finally {
       setLoading(false);
     }

@@ -147,7 +147,10 @@ export default function ApiKeysPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">API Keys</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-text-primary">API Keys</h1>
+            <Badge variant="info">Coming Soon</Badge>
+          </div>
           <p className="text-sm text-text-muted">
             Manage your API keys for accessing ENVI-OUS BRAIN services
           </p>
@@ -156,6 +159,13 @@ export default function ApiKeysPage() {
           + Create API Key
         </Button>
       </div>
+
+      {/* Coming Soon Notice */}
+      <Card className="mb-6">
+        <p className="text-sm text-text-secondary text-center py-2">
+          API key management is under active development. The data shown below is sample data for preview purposes.
+        </p>
+      </Card>
 
       {/* Stats Row */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

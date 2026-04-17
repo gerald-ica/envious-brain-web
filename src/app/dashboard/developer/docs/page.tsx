@@ -19,418 +19,272 @@ interface Endpoint {
 
 // ---- Mock Data --------------------------------------------------------------
 
+const BIRTH_PAYLOAD = JSON.stringify(
+  {
+    datetime: "1990-06-15T14:30:00",
+    latitude: 40.7128,
+    longitude: -74.006,
+    timezone: "America/New_York",
+  },
+  null,
+  2,
+);
+
 const ENDPOINTS: Endpoint[] = [
   // Charts
   {
     method: "POST",
-    path: "/api/v1/charts/natal",
-    description: "Generate a natal birth chart from date, time, and location.",
+    path: "/api/v1/charts/western",
+    description: "Calculate a Western natal chart (tropical zodiac, Placidus houses).",
     tag: "Charts",
-    requestExample: JSON.stringify(
-      {
-        birth_date: "1990-06-15",
-        birth_time: "14:30:00",
-        latitude: 40.7128,
-        longitude: -74.006,
-        house_system: "placidus",
-      },
-      null,
-      2
-    ),
+    requestExample: BIRTH_PAYLOAD,
     responseExample: JSON.stringify(
-      {
-        chart_id: "ch_9x8f7e6d",
-        sun: { sign: "Gemini", degree: 24.5, house: 10 },
-        moon: { sign: "Scorpio", degree: 12.3, house: 3 },
-        ascendant: { sign: "Virgo", degree: 8.7 },
-        aspects: [{ planet1: "Sun", planet2: "Moon", type: "trine", orb: 2.1 }],
-      },
-      null,
-      2
+      { positions: { Sun: { sign: "Gemini", degree_in_sign: 24.2, retrograde: false } }, aspects: [], houses: [] },
+      null, 2,
     ),
   },
   {
     method: "POST",
-    path: "/api/v1/charts/synastry",
-    description: "Compute synastry chart comparing two natal charts for relationship analysis.",
+    path: "/api/v1/charts/vedic",
+    description: "Calculate a Vedic sidereal chart with nakshatras and Vimshottari dashas.",
     tag: "Charts",
-    requestExample: JSON.stringify(
-      {
-        chart_id_a: "ch_9x8f7e6d",
-        chart_id_b: "ch_4a3b2c1d",
-        aspects: ["conjunction", "trine", "square", "opposition"],
-      },
-      null,
-      2
-    ),
+    requestExample: BIRTH_PAYLOAD,
     responseExample: JSON.stringify(
-      {
-        synastry_id: "syn_m2n3o4p5",
-        compatibility_score: 78,
-        aspects: [
-          { planet_a: "Venus", planet_b: "Mars", type: "trine", orb: 1.4 },
-          { planet_a: "Moon", planet_b: "Sun", type: "conjunction", orb: 3.2 },
-        ],
-      },
-      null,
-      2
+      { positions: { Moon: { rashi: "Tula", sidereal_longitude: 188.3 } }, nakshatra: { name: "Swati" } },
+      null, 2,
     ),
   },
   {
     method: "POST",
-    path: "/api/v1/charts/composite",
-    description: "Generate composite midpoint chart from two natal charts.",
+    path: "/api/v1/charts/bazi",
+    description: "Calculate BaZi Four Pillars of Destiny.",
     tag: "Charts",
-    requestExample: JSON.stringify(
-      { chart_id_a: "ch_9x8f7e6d", chart_id_b: "ch_4a3b2c1d" },
-      null,
-      2
-    ),
+    requestExample: JSON.stringify({ datetime: "1990-06-15T14:30:00", gender: "male" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        composite_id: "comp_q5r6s7t8",
-        sun: { sign: "Leo", degree: 18.6, house: 7 },
-        moon: { sign: "Aquarius", degree: 5.4, house: 1 },
-      },
-      null,
-      2
+      { pillars: { year: { stem: "Geng", branch: "Wu_branch", animal: "Horse" } }, day_master: "Xin" },
+      null, 2,
     ),
   },
   {
-    method: "GET",
-    path: "/api/v1/charts/{chart_id}",
-    description: "Retrieve a previously computed chart by its ID.",
+    method: "POST",
+    path: "/api/v1/charts/human-design",
+    description: "Calculate a Human Design bodygraph.",
     tag: "Charts",
+    requestExample: BIRTH_PAYLOAD,
     responseExample: JSON.stringify(
-      {
-        chart_id: "ch_9x8f7e6d",
-        type: "natal",
-        created_at: "2026-04-16T10:30:00Z",
-        sun: { sign: "Gemini", degree: 24.5 },
-      },
-      null,
-      2
+      { type: "Generator", strategy: "Wait to Respond", authority: "Sacral", profile: "3/5" },
+      null, 2,
     ),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/charts/solar-return",
+    description: "Calculate a solar return chart for a given year.",
+    tag: "Charts",
+    requestExample: JSON.stringify({ ...JSON.parse(BIRTH_PAYLOAD), target_year: 2026 }, null, 2),
+    responseExample: JSON.stringify({ positions: {}, houses: [], solar_return_datetime: "2026-06-15T02:45:00Z" }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/charts/progressions",
+    description: "Calculate secondary progressions to a target date.",
+    tag: "Charts",
+    requestExample: JSON.stringify({ ...JSON.parse(BIRTH_PAYLOAD), target_date: "2026-04-17T00:00:00" }, null, 2),
+    responseExample: JSON.stringify({ positions: {} }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/western/synastry",
+    description: "Calculate synastry (relationship compatibility) between two charts.",
+    tag: "Western Advanced",
+    requestExample: JSON.stringify({
+      person1_datetime: "1990-06-15T14:30:00", person1_latitude: 40.71, person1_longitude: -74.0,
+      person2_datetime: "1992-03-20T10:00:00", person2_latitude: 34.05, person2_longitude: -118.24,
+    }, null, 2),
+    responseExample: JSON.stringify({ compatibility_score: 78, aspects: [] }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/western/draconic",
+    description: "Calculate draconic (soul) chart aligned to North Node.",
+    tag: "Western Advanced",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ positions: {} }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/western/fixed-stars",
+    description: "Find fixed star conjunctions with natal planets.",
+    tag: "Western Advanced",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ conjunctions: [{ star: "Aldebaran", planet: "Sun", orb: 0.8 }] }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/western/arabic-parts",
+    description: "Calculate Arabic Parts / Lots from natal positions.",
+    tag: "Western Advanced",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ parts: [{ name: "Part of Fortune", sign: "Aries", degree: 15.3 }] }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/western/hellenistic/sect",
+    description: "Hellenistic sect analysis (diurnal vs. nocturnal chart).",
+    tag: "Techniques",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ sect: "diurnal", sect_light: "Sun" }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/western/hellenistic/profection",
+    description: "Annual profections from the natal Ascendant.",
+    tag: "Techniques",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ current_house: 12, time_lord: "Jupiter" }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/techniques/dignities",
+    description: "Essential dignities table for all natal planets.",
+    tag: "Techniques",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ dignities: { Sun: { sign: "Gemini", dignity: "Peregrine" } } }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/techniques/declinations",
+    description: "Planetary declinations and parallel/contraparallel aspects.",
+    tag: "Techniques",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ declinations: { Sun: { declination: 23.1 } }, aspects: [] }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/techniques/midpoints",
+    description: "Midpoint trees and planetary pictures.",
+    tag: "Techniques",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ midpoints: [{ planet1: "Sun", planet2: "Moon", longitude: 150.5 }] }, null, 2),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/techniques/sabian-symbols",
+    description: "Sabian degree symbols for each planet position.",
+    tag: "Techniques",
+    requestExample: BIRTH_PAYLOAD,
+    responseExample: JSON.stringify({ symbols: [{ planet: "Sun", sign: "Gemini", degree: 25, symbol: "A gardener..." }] }, null, 2),
   },
 
   // Personality
   {
     method: "POST",
-    path: "/api/v1/personality/mbti",
-    description: "Analyze MBTI personality type from natal chart positions.",
-    tag: "Personality",
-    requestExample: JSON.stringify({ chart_id: "ch_9x8f7e6d" }, null, 2),
-    responseExample: JSON.stringify(
-      {
-        type: "INTJ",
-        confidence: 0.87,
-        functions: { dominant: "Ni", auxiliary: "Te", tertiary: "Fi", inferior: "Se" },
-        description: "Strategic and analytical with strong intuitive drive.",
-      },
-      null,
-      2
-    ),
-  },
-  {
-    method: "POST",
     path: "/api/v1/personality/enneagram",
-    description: "Determine Enneagram type and wing from astrological profile.",
+    description: "Enneagram type derivation from astrological profile.",
     tag: "Personality",
-    requestExample: JSON.stringify({ chart_id: "ch_9x8f7e6d" }, null, 2),
+    requestExample: JSON.stringify({ mbti_type: "INTJ" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        type: 5,
-        wing: 4,
-        label: "The Investigator",
-        integration: 8,
-        disintegration: 7,
-        confidence: 0.82,
-      },
-      null,
-      2
+      { primary_type: 5, type_name: "The Investigator", wing: 4, tritype: "549" },
+      null, 2,
     ),
   },
   {
     method: "POST",
-    path: "/api/v1/personality/synthesis",
-    description: "Generate a full personality synthesis combining all available frameworks.",
+    path: "/api/v1/personality/calculate",
+    description: "Full personality synthesis combining multiple frameworks.",
     tag: "Personality",
-    requestExample: JSON.stringify(
-      { chart_id: "ch_9x8f7e6d", frameworks: ["mbti", "enneagram", "archetype"] },
-      null,
-      2
-    ),
+    requestExample: JSON.stringify({ mbti_type: "INTJ" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        synthesis_id: "syn_a1b2c3d4",
-        summary: "A deeply analytical mind with strong investigative tendencies...",
-        frameworks: { mbti: "INTJ", enneagram: "5w4", archetype: "The Scholar" },
-      },
-      null,
-      2
+      { dominant_function: "Ni", auxiliary_function: "Te", personality_state: {} },
+      null, 2,
+    ),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/personality/biorhythm",
+    description: "Biorhythm cycles (physical, emotional, intellectual).",
+    tag: "Personality",
+    requestExample: JSON.stringify({ birth_date: "1990-06-15", target_date: "2026-04-17" }, null, 2),
+    responseExample: JSON.stringify(
+      { physical: { value: 0.72, day: 8 }, emotional: { value: -0.34, day: 14 } },
+      null, 2,
+    ),
+  },
+  {
+    method: "POST",
+    path: "/api/v1/psychology/jungian-archetypes",
+    description: "Jungian archetype analysis from Sun/Moon/Ascendant signs.",
+    tag: "Personality",
+    requestExample: JSON.stringify({ sun_sign: "Gemini", moon_sign: "Scorpio", ascendant: "Virgo" }, null, 2),
+    responseExample: JSON.stringify(
+      { primary: "The Alchemist", shadow: "The Trickster", scores: {} },
+      null, 2,
     ),
   },
 
   // Oracle
   {
     method: "POST",
-    path: "/api/v1/oracle/query",
-    description: "Send a natural language question to the Oracle AI for cosmic insight.",
+    path: "/api/v1/llm/sessions",
+    description: "Create a new Oracle AI chat session.",
     tag: "Oracle",
-    requestExample: JSON.stringify(
-      {
-        chart_id: "ch_9x8f7e6d",
-        question: "What career path aligns with my chart?",
-        context: "natal",
-      },
-      null,
-      2
-    ),
-    responseExample: JSON.stringify(
-      {
-        response_id: "or_e5f6g7h8",
-        answer:
-          "With your Gemini Sun in the 10th house and Mercury conjunct, careers in communication, writing, or technology are strongly favored...",
-        confidence: 0.91,
-        cited_placements: ["Sun in Gemini 10H", "Mercury conjunct Sun"],
-      },
-      null,
-      2
-    ),
+    requestExample: JSON.stringify({ system_prompt: "You are a cosmic advisor..." }, null, 2),
+    responseExample: JSON.stringify({ session_id: "sess_abc123" }, null, 2),
   },
   {
     method: "POST",
-    path: "/api/v1/oracle/session",
-    description: "Start a multi-turn conversational Oracle session.",
+    path: "/api/v1/llm/sessions/{session_id}/messages",
+    description: "Send a message to an Oracle session and get a response.",
     tag: "Oracle",
-    requestExample: JSON.stringify(
-      { chart_id: "ch_9x8f7e6d", mode: "deep_dive" },
-      null,
-      2
-    ),
+    requestExample: JSON.stringify({ role: "user", content: "What does my Sun in Gemini mean?" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        session_id: "sess_i9j0k1l2",
-        status: "active",
-        expires_at: "2026-04-16T11:30:00Z",
-      },
-      null,
-      2
+      { role: "assistant", content: "Your Gemini Sun suggests a quick, adaptable mind..." },
+      null, 2,
     ),
   },
 
-  // Predictive
+  // Explore
   {
-    method: "GET",
-    path: "/api/v1/transits/current",
-    description: "Get current planetary transits and aspects in real time.",
-    tag: "Predictive",
+    method: "POST",
+    path: "/api/v1/chinese/iching/cast",
+    description: "Cast an I Ching hexagram with an optional question.",
+    tag: "Explore",
+    requestExample: JSON.stringify({ question: "Should I take the new opportunity?" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        timestamp: "2026-04-16T10:30:00Z",
-        transits: [
-          { planet: "Mercury", sign: "Aries", degree: 12.4 },
-          { planet: "Venus", sign: "Pisces", degree: 28.1 },
-        ],
-        aspects: [
-          { transit: "Mercury", natal: "Sun", type: "conjunction", orb: 0.8, exact_at: "2026-04-16T14:00:00Z" },
-        ],
-      },
-      null,
-      2
+      { hexagram_number: 42, name: "Yi (Increase)", judgment: "It furthers one to undertake something." },
+      null, 2,
     ),
   },
   {
     method: "POST",
-    path: "/api/v1/forecast/daily",
-    description: "Generate a daily forecast for a chart considering current transits.",
-    tag: "Predictive",
-    requestExample: JSON.stringify(
-      { chart_id: "ch_9x8f7e6d", date: "2026-04-16" },
-      null,
-      2
-    ),
+    path: "/api/v1/personality/tarot/birth-cards",
+    description: "Calculate tarot birth cards from birth date.",
+    tag: "Explore",
+    requestExample: JSON.stringify({ birth_date: "1990-06-15" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        date: "2026-04-16",
-        overall_energy: 7.5,
-        themes: ["communication", "strategy", "caution"],
-        summary: "A day for strategic thinking. Mercury's conjunction sharpens communication...",
-        alerts: [{ type: "caution", description: "Mars-Saturn square in afternoon hours" }],
-      },
-      null,
-      2
-    ),
-  },
-  {
-    method: "POST",
-    path: "/api/v1/forecast/weekly",
-    description: "Generate a weekly forecast summary with day-by-day highlights.",
-    tag: "Predictive",
-    requestExample: JSON.stringify(
-      { chart_id: "ch_9x8f7e6d", week_start: "2026-04-13" },
-      null,
-      2
-    ),
-    responseExample: JSON.stringify(
-      {
-        week_start: "2026-04-13",
-        week_end: "2026-04-19",
-        highlights: [
-          { day: "2026-04-16", event: "Mercury conjunct natal Sun" },
-          { day: "2026-04-18", event: "Venus trine natal Moon" },
-        ],
-        overall_theme: "Intellectual expansion and emotional clarity",
-      },
-      null,
-      2
-    ),
-  },
-
-  // Export
-  {
-    method: "POST",
-    path: "/api/v1/export/pdf",
-    description: "Export a chart or reading as a formatted PDF document.",
-    tag: "Export",
-    requestExample: JSON.stringify(
-      {
-        chart_id: "ch_9x8f7e6d",
-        include: ["natal_chart", "aspects", "interpretation"],
-        theme: "dark",
-      },
-      null,
-      2
-    ),
-    responseExample: JSON.stringify(
-      {
-        export_id: "exp_m3n4o5p6",
-        status: "processing",
-        download_url: null,
-        estimated_seconds: 8,
-      },
-      null,
-      2
+      { birth_card: "The Lovers", personality_card: "The Devil", year_card: "The Tower" },
+      null, 2,
     ),
   },
   {
     method: "GET",
-    path: "/api/v1/export/{export_id}",
-    description: "Check export status and retrieve download URL.",
-    tag: "Export",
+    path: "/api/v1/space-weather/current",
+    description: "Get current space weather conditions (solar wind, Kp index, flares).",
+    tag: "Explore",
     responseExample: JSON.stringify(
-      {
-        export_id: "exp_m3n4o5p6",
-        status: "complete",
-        download_url: "https://cdn.envious-brain.com/exports/exp_m3n4o5p6.pdf",
-        expires_at: "2026-04-17T10:30:00Z",
-      },
-      null,
-      2
+      { kp_index: 3, solar_wind_speed: 450, flare_status: "None" },
+      null, 2,
     ),
   },
   {
     method: "POST",
-    path: "/api/v1/export/batch",
-    description: "Queue a batch export of multiple charts or readings.",
-    tag: "Export",
-    requestExample: JSON.stringify(
-      {
-        chart_ids: ["ch_9x8f7e6d", "ch_4a3b2c1d", "ch_x7y8z9a0"],
-        format: "pdf",
-        include: ["natal_chart", "interpretation"],
-      },
-      null,
-      2
-    ),
+    path: "/api/v1/psychology/color-palette",
+    description: "Generate a personal color palette from astrological signs.",
+    tag: "Explore",
+    requestExample: JSON.stringify({ sun_sign: "Gemini", moon_sign: "Scorpio", rising_sign: "Virgo" }, null, 2),
     responseExample: JSON.stringify(
-      {
-        batch_id: "bat_q6r7s8t9",
-        total: 3,
-        status: "queued",
-        webhook_url: "https://your-app.com/webhooks/batch",
-      },
-      null,
-      2
-    ),
-  },
-
-  // Admin
-  {
-    method: "GET",
-    path: "/api/v1/admin/usage",
-    description: "Retrieve aggregated usage statistics for your account.",
-    tag: "Admin",
-    responseExample: JSON.stringify(
-      {
-        period: "2026-04",
-        total_requests: 284190,
-        total_errors: 1847,
-        top_endpoints: ["/api/v1/charts/natal", "/api/v1/oracle/query"],
-        rate_limit_hits: 421,
-      },
-      null,
-      2
-    ),
-  },
-  {
-    method: "PUT",
-    path: "/api/v1/admin/webhooks/{webhook_id}",
-    description: "Update a webhook registration (URL, events, or status).",
-    tag: "Admin",
-    requestExample: JSON.stringify(
-      {
-        url: "https://your-app.com/webhooks/updated",
-        events: ["chart.computed", "reading.complete"],
-        active: true,
-      },
-      null,
-      2
-    ),
-    responseExample: JSON.stringify(
-      {
-        webhook_id: "wh_u0v1w2x3",
-        url: "https://your-app.com/webhooks/updated",
-        events: ["chart.computed", "reading.complete"],
-        active: true,
-        updated_at: "2026-04-16T10:45:00Z",
-      },
-      null,
-      2
-    ),
-  },
-  {
-    method: "DELETE",
-    path: "/api/v1/admin/keys/{key_id}",
-    description: "Permanently delete an API key. This action cannot be undone.",
-    tag: "Admin",
-    responseExample: JSON.stringify(
-      { deleted: true, key_id: "key_y4z5a6b7" },
-      null,
-      2
-    ),
-  },
-  {
-    method: "GET",
-    path: "/api/v1/admin/audit-log",
-    description: "Retrieve the audit log of account actions and API events.",
-    tag: "Admin",
-    responseExample: JSON.stringify(
-      {
-        entries: [
-          {
-            timestamp: "2026-04-16T10:30:00Z",
-            action: "key.created",
-            actor: "user_abc123",
-            details: { key_name: "Production App" },
-          },
-        ],
-        total: 1247,
-        page: 1,
-        per_page: 50,
-      },
-      null,
-      2
+      { primary_color: "#4A90D9", secondary_colors: ["#8B5CF6", "#10B981"] },
+      null, 2,
     ),
   },
 ];
@@ -468,7 +322,15 @@ export default function ApiDocsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">API Documentation</h1>
         <p className="text-sm text-text-muted">
-          Explore all available ENVI-OUS BRAIN API endpoints
+          Explore all available ENVI-OUS BRAIN API endpoints.{" "}
+          <a
+            href="https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent-blue hover:underline"
+          >
+            View interactive Swagger docs &rarr;
+          </a>
         </p>
       </div>
 

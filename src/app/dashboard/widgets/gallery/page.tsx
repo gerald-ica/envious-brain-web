@@ -1,10 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/loading";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
+const ZODIAC_SIGNS = [
+  "aries", "taurus", "gemini", "cancer", "leo", "virgo",
+  "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+] as const;
 
 // ---- Types ------------------------------------------------------------------
 
@@ -316,6 +326,31 @@ function WidgetPreview({ type }: { type: string }) {
 export default function WidgetGalleryPage() {
   const [category, setCategory] = useState<string>("All");
   const [showCodeFor, setShowCodeFor] = useState<string | null>(null);
+  const [horoscopeSign, setHoroscopeSign] = useState<string>("aries");
+  const [horoscope, setHoroscope] = useState<Record<string, unknown> | null>(null);
+  const [horoscopeLoading, setHoroscopeLoading] = useState(false);
+  const [horoscopeError, setHoroscopeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHoroscopeLoading(true);
+    setHoroscopeError(null);
+    fetch(`${API_URL}/api/v1/widgets/daily-horoscope/${horoscopeSign}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
+      .then((data: Record<string, unknown>) => {
+        if (!cancelled) setHoroscope(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setHoroscopeError(err instanceof Error ? err.message : "Request failed");
+      })
+      .finally(() => {
+        if (!cancelled) setHoroscopeLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [horoscopeSign]);
 
   const filtered =
     category === "All"
@@ -331,6 +366,40 @@ export default function WidgetGalleryPage() {
           Embeddable components to bring ENVI-OUS BRAIN into any application
         </p>
       </div>
+
+      {/* Live Horoscope Preview */}
+      <Card className="mb-6" glow="purple">
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Live Daily Horoscope Preview</h2>
+          <Badge variant="healthy">Live</Badge>
+        </div>
+        <div className="mb-4 flex flex-wrap gap-1">
+          {ZODIAC_SIGNS.map((sign) => (
+            <button
+              key={sign}
+              onClick={() => setHoroscopeSign(sign)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                horoscopeSign === sign
+                  ? "border-accent-purple bg-accent-purple/10 text-accent-purple"
+                  : "border-border bg-card text-text-secondary hover:border-border-hover"
+              }`}
+            >
+              {sign}
+            </button>
+          ))}
+        </div>
+        {horoscopeLoading ? (
+          <div className="flex justify-center py-6"><Spinner /></div>
+        ) : horoscopeError ? (
+          <p className="text-sm text-accent-rose py-4 text-center">
+            Could not load horoscope: {horoscopeError}
+          </p>
+        ) : horoscope ? (
+          <pre className="overflow-x-auto rounded-lg bg-navy p-3 text-xs text-accent-emerald font-mono max-h-64 overflow-y-auto">
+            {JSON.stringify(horoscope, null, 2)}
+          </pre>
+        ) : null}
+      </Card>
 
       {/* Category Filter */}
       <div className="mb-6 flex gap-2">

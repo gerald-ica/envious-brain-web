@@ -136,11 +136,21 @@ export default function UsageDashboardPage() {
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Usage Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-text-primary">Usage Dashboard</h1>
+          <Badge variant="info">Coming Soon</Badge>
+        </div>
         <p className="text-sm text-text-muted">
           Monitor your API consumption and performance metrics
         </p>
       </div>
+
+      {/* Coming Soon Notice */}
+      <Card className="mb-6">
+        <p className="text-sm text-text-secondary text-center py-2">
+          Usage analytics is under active development. The data shown below is sample data for preview purposes.
+        </p>
+      </Card>
 
       {/* Request Counts */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

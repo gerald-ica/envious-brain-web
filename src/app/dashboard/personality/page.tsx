@@ -45,6 +45,16 @@ const personalitySystems = [
       "Physical, emotional, intellectual, and intuitive biorhythm cycles with critical day warnings.",
     icon: "\u223F",
   },
+  {
+    title: "Synthesis",
+    subtitle: "Full Personality Integration",
+    href: "/dashboard/personality/synthesis",
+    badge: "All-in-One",
+    badgeVariant: "info" as const,
+    description:
+      "Combined personality profile merging MBTI, Enneagram, archetypes, and astrological factors into a unified analysis.",
+    icon: "\u2726",
+  },
 ];
 
 export default function PersonalityIndexPage() {

@@ -79,14 +79,13 @@ const GETTING_STARTED_STEPS = [
     step: 2,
     title: "Make Your First Request",
     description: "Use your key in the Authorization header to authenticate requests.",
-    code: `curl -X POST https://api.envious-brain.com/api/v1/charts/natal \\
-  -H "Authorization: Bearer eb_test_your_key_here" \\
+    code: `curl -X POST https://envious-brain-api-uxgej3n6ta-uc.a.run.app/api/v1/charts/western \\
   -H "Content-Type: application/json" \\
   -d '{
-    "birth_date": "1990-06-15",
-    "birth_time": "14:30:00",
+    "datetime": "1990-06-15T14:30:00",
     "latitude": 40.7128,
-    "longitude": -74.006
+    "longitude": -74.006,
+    "timezone": "America/New_York"
   }'`,
   },
   {
@@ -114,7 +113,15 @@ export default function DeveloperIndexPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">Developer Portal</h1>
         <p className="text-sm text-text-muted">
-          Build with the ENVI-OUS BRAIN API -- charts, personality, oracle, and more
+          Build with the ENVI-OUS BRAIN API -- charts, personality, oracle, and more.{" "}
+          <a
+            href="https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent-blue hover:underline"
+          >
+            Swagger docs &rarr;
+          </a>
         </p>
       </div>
 

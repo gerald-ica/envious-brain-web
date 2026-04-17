@@ -88,9 +88,12 @@ export default function AdminIndexPage() {
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text-primary">Admin Overview</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-text-primary">Admin Overview</h1>
+          <Badge variant="info">Coming Soon</Badge>
+        </div>
         <p className="mt-1 text-sm text-text-muted">
-          System health, key metrics, and quick access to admin tools
+          System health, key metrics, and quick access to admin tools. Data shown is for preview purposes.
         </p>
       </div>
 

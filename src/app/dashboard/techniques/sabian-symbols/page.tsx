@@ -35,7 +35,14 @@ export default function SabianSymbolsPage() {
       .then((res) => setData(res.data))
       .catch((err) => {
         console.error("Sabian symbols API error:", err);
-        setError("Failed to load Sabian symbols. Check API connection.");
+        const status = (err as { status?: number }).status;
+        if (status === 404) {
+          setError("Sabian symbols endpoint is not yet deployed.");
+        } else if (status === 422) {
+          setError("Invalid request — check your birth profile data.");
+        } else {
+          setError("Failed to load Sabian symbols. Check API connection.");
+        }
       })
       .finally(() => setLoading(false));
   }, [activeProfile]);

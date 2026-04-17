@@ -81,6 +81,42 @@ const CHART_TYPES: ChartType[] = [
     badge: "Compatibility",
     badgeVariant: "degraded",
   },
+  {
+    title: "Solar Return",
+    href: "/dashboard/charts/solar-return",
+    icon: "\u2609", // ☉
+    description:
+      "Annual solar return chart calculated for the exact moment the Sun returns to its natal position each year.",
+    badge: "Annual",
+    badgeVariant: "info",
+  },
+  {
+    title: "Progressions",
+    href: "/dashboard/charts/progressions",
+    icon: "\u2192", // →
+    description:
+      "Secondary progressions showing the internal evolution of planetary positions, one day per year of life.",
+    badge: "Predictive",
+    badgeVariant: "healthy",
+  },
+  {
+    title: "Draconic",
+    href: "/dashboard/charts/draconic",
+    icon: "\u260A", // ☊
+    description:
+      "Soul chart aligned to the North Node, revealing karmic patterns and the deeper spiritual blueprint.",
+    badge: "Soul",
+    badgeVariant: "neutral",
+  },
+  {
+    title: "Harmonics",
+    href: "/dashboard/charts/harmonics",
+    icon: "\u223F", // ∿
+    description:
+      "Harmonic chart analysis exploring resonance patterns through planetary wave harmonics.",
+    badge: "Advanced",
+    badgeVariant: "degraded",
+  },
 ];
 
 export default function ChartsIndexPage() {

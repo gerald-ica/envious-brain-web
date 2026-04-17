@@ -206,32 +206,48 @@ export default function VedicPage() {
   ) => {
     setLoading(true);
     setStatus("loading");
-    try {
-      const t = time || "12:00";
-      const res = await fetch(`${API_URL}/api/v1/vedic/chart`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          datetime: `${date}T${t}:00`,
-          latitude: lat,
-          longitude: lon,
-          timezone: tz,
-          ayanamsa: "lahiri",
-        }),
-      });
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      const json = (await res.json()) as VedicResponse;
-      setData(json);
-      setStatus("live");
-      setCalculated(true);
-    } catch (err) {
-      console.warn("Vedic API unavailable, using sample data:", err);
-      setData(null);
-      setStatus("fallback");
-      setCalculated(true);
-    } finally {
-      setLoading(false);
+    const t = time || "12:00";
+    const payload = {
+      datetime: `${date}T${t}:00`,
+      latitude: lat,
+      longitude: lon,
+      timezone: tz,
+      ayanamsa: "lahiri",
+    };
+
+    // Try primary endpoint first, then legacy path
+    const urls = [
+      `${API_URL}/api/v1/charts/vedic`,
+      `${API_URL}/api/v1/vedic/chart`,
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.status === 404) continue; // try next URL
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const json = (await res.json()) as VedicResponse;
+        setData(json);
+        setStatus("live");
+        setCalculated(true);
+        setLoading(false);
+        return;
+      } catch (err) {
+        if (url === urls[urls.length - 1]) {
+          console.warn("Vedic API unavailable, using sample data:", err);
+        }
+      }
     }
+
+    // Both URLs failed or returned 404
+    setData(null);
+    setStatus("fallback");
+    setCalculated(true);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -293,6 +309,12 @@ export default function VedicPage() {
           <StatusIndicator status={status} />
         </div>
       </div>
+
+      {status === "fallback" && (
+        <div className="mb-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-3 text-sm text-accent-amber">
+          Vedic chart calculations will be available after the next backend deployment. Showing sample data below.
+        </div>
+      )}
 
       {/* Birth Data */}
       <Card title="Birth Data" className="mb-6">

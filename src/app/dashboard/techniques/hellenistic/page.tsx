@@ -46,7 +46,15 @@ export default function HellenisticPage() {
           (r) => r.status === "rejected",
         );
         if (failed.length === 3) {
-          setError("Failed to load Hellenistic data. Check API connection.");
+          const firstErr = (failed[0] as PromiseRejectedResult).reason;
+          const status = (firstErr as { status?: number })?.status;
+          if (status === 404) {
+            setError("Hellenistic endpoints are not yet deployed.");
+          } else if (status === 422) {
+            setError("Invalid request — check your birth profile data.");
+          } else {
+            setError("Failed to load Hellenistic data. Check API connection.");
+          }
         }
       })
       .finally(() => setLoading(false));

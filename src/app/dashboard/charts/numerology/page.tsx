@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/lib/store";
+import { api } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/loading";
 
 // ---------------------------------------------------------------------------
-// Numerology
+// Numerology + Tarot Birth Cards
 // ---------------------------------------------------------------------------
 
 // ---- Pythagorean numerology values ---------------------------------------
@@ -22,7 +24,6 @@ const LETTER_VALUES: Record<string, number> = {
 const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 
 function reduceNumber(n: number): number {
-  // Keep master numbers 11, 22, 33
   while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
     n = String(n)
       .split("")
@@ -32,7 +33,6 @@ function reduceNumber(n: number): number {
 }
 
 function lifePathFromBirth(birthDate: string): number {
-  // birthDate format "YYYY-MM-DD"
   if (!birthDate) return 0;
   const digits = birthDate.replace(/\D/g, "").split("").map(Number);
   if (!digits.length) return 0;
@@ -78,92 +78,37 @@ interface NumberInfo {
 }
 
 const NUMBER_MEANINGS: Record<number, NumberInfo> = {
-  1: {
-    title: "The Leader",
-    meaning:
-      "Number 1 is the path of the pioneer, leader, and original thinker. You are driven to carve your own direction and inspire independence in others.",
-    keywords: ["Leadership", "Independence", "Originality", "Drive"],
-  },
-  2: {
-    title: "The Diplomat",
-    meaning:
-      "Number 2 resonates with partnership, cooperation, and sensitivity. You bring harmony to groups and excel at reading subtle emotional currents.",
-    keywords: ["Cooperation", "Harmony", "Sensitivity", "Balance"],
-  },
-  3: {
-    title: "The Communicator",
-    meaning:
-      "Number 3 is the path of self-expression, creativity, and joy. You uplift others through words, art, and social magnetism.",
-    keywords: ["Creativity", "Expression", "Joy", "Social"],
-  },
-  4: {
-    title: "The Builder",
-    meaning:
-      "Number 4 is the path of structure, discipline, and foundations. You create enduring things through patience and methodical effort.",
-    keywords: ["Structure", "Discipline", "Foundation", "Reliability"],
-  },
-  5: {
-    title: "The Freedom Seeker",
-    meaning:
-      "Number 5 is the path of versatility and adventure. You express yourself through change, variety, and sensory experience.",
-    keywords: ["Versatility", "Adventure", "Freedom", "Change"],
-  },
-  6: {
-    title: "The Nurturer",
-    meaning:
-      "Number 6 is the path of responsibility, care, and devotion. You create beauty and harmony, often acting as healer or teacher for others.",
-    keywords: ["Nurture", "Responsibility", "Beauty", "Harmony"],
-  },
-  7: {
-    title: "The Seeker",
-    meaning:
-      "Number 7 is the path of the spiritual seeker and intellectual explorer. Analytical, introspective, and perceptive, you seek truth beneath the surface.",
-    keywords: ["Introspection", "Analysis", "Spiritual", "Wisdom"],
-  },
-  8: {
-    title: "The Achiever",
-    meaning:
-      "Number 8 is the path of power, ambition, and material mastery. You are built to manage resources, build enterprises, and lead in the world of form.",
-    keywords: ["Ambition", "Power", "Mastery", "Authority"],
-  },
-  9: {
-    title: "The Humanitarian",
-    meaning:
-      "Number 9 is the path of completion, compassion, and universal love. You feel called to serve something larger than yourself.",
-    keywords: ["Compassion", "Completion", "Wisdom", "Service"],
-  },
-  11: {
-    title: "The Illuminator",
-    meaning:
-      "Master Number 11. Your deepest vibration is to inspire and uplift humanity. An extraordinary sensitivity and intuition illuminates the path for others.",
-    keywords: ["Inspiration", "Intuition", "Vision", "Mastery"],
-  },
-  22: {
-    title: "The Master Builder",
-    meaning:
-      "Master Number 22. You are wired to manifest visionary ideas in concrete form, bridging the spiritual and material on a grand scale.",
-    keywords: ["Manifestation", "Vision", "Structure", "Legacy"],
-  },
-  33: {
-    title: "The Master Teacher",
-    meaning:
-      "Master Number 33. The rarest master number -- a path of selfless service, profound compassion, and teaching through embodiment.",
-    keywords: ["Service", "Compassion", "Teaching", "Embodiment"],
-  },
+  1: { title: "The Leader", meaning: "Number 1 is the path of the pioneer, leader, and original thinker.", keywords: ["Leadership", "Independence", "Originality", "Drive"] },
+  2: { title: "The Diplomat", meaning: "Number 2 resonates with partnership, cooperation, and sensitivity.", keywords: ["Cooperation", "Harmony", "Sensitivity", "Balance"] },
+  3: { title: "The Communicator", meaning: "Number 3 is the path of self-expression, creativity, and joy.", keywords: ["Creativity", "Expression", "Joy", "Social"] },
+  4: { title: "The Builder", meaning: "Number 4 is the path of structure, discipline, and foundations.", keywords: ["Structure", "Discipline", "Foundation", "Reliability"] },
+  5: { title: "The Freedom Seeker", meaning: "Number 5 is the path of versatility and adventure.", keywords: ["Versatility", "Adventure", "Freedom", "Change"] },
+  6: { title: "The Nurturer", meaning: "Number 6 is the path of responsibility, care, and devotion.", keywords: ["Nurture", "Responsibility", "Beauty", "Harmony"] },
+  7: { title: "The Seeker", meaning: "Number 7 is the path of the spiritual seeker and intellectual explorer.", keywords: ["Introspection", "Analysis", "Spiritual", "Wisdom"] },
+  8: { title: "The Achiever", meaning: "Number 8 is the path of power, ambition, and material mastery.", keywords: ["Ambition", "Power", "Mastery", "Authority"] },
+  9: { title: "The Humanitarian", meaning: "Number 9 is the path of completion, compassion, and universal love.", keywords: ["Compassion", "Completion", "Wisdom", "Service"] },
+  11: { title: "The Illuminator", meaning: "Master Number 11. Your deepest vibration is to inspire and uplift humanity.", keywords: ["Inspiration", "Intuition", "Vision", "Mastery"] },
+  22: { title: "The Master Builder", meaning: "Master Number 22. You are wired to manifest visionary ideas in concrete form.", keywords: ["Manifestation", "Vision", "Structure", "Legacy"] },
+  33: { title: "The Master Teacher", meaning: "Master Number 33. A path of selfless service, profound compassion, and teaching.", keywords: ["Service", "Compassion", "Teaching", "Embodiment"] },
 };
 
 function meaningFor(n: number): NumberInfo {
-  return (
-    NUMBER_MEANINGS[n] ?? {
-      title: "Unknown",
-      meaning: "Enter your full birth name and date to calculate this number.",
-      keywords: [],
-    }
-  );
+  return NUMBER_MEANINGS[n] ?? { title: "Unknown", meaning: "", keywords: [] };
 }
 
 function isMasterNumber(n: number): boolean {
   return n === 11 || n === 22 || n === 33;
+}
+
+// ---- Tarot card type -----------------------------------------------------
+
+interface TarotCard {
+  name?: string;
+  number?: number;
+  meaning?: string;
+  description?: string;
+  keywords?: string[];
+  [k: string]: unknown;
 }
 
 // ---- Number card component ------------------------------------------------
@@ -186,7 +131,6 @@ function NumberCard({
   return (
     <Card className={large ? "lg:col-span-2" : ""} glow={isMaster ? "purple" : "none"}>
       <div className={`flex ${large ? "flex-col sm:flex-row" : "flex-col"} gap-4`}>
-        {/* Big number */}
         <div
           className={`flex shrink-0 items-center justify-center rounded-xl border ${
             isMaster
@@ -202,23 +146,15 @@ function NumberCard({
             {number}
           </span>
         </div>
-
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-base font-semibold text-text-primary">
-              {title}
-            </h3>
+            <h3 className="text-base font-semibold text-text-primary">{title}</h3>
             {isMaster && <Badge variant="degraded">Master Number</Badge>}
           </div>
-          <p className="text-sm leading-relaxed text-text-secondary">
-            {meaning}
-          </p>
+          <p className="text-sm leading-relaxed text-text-secondary">{meaning}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {keywords.map((kw) => (
-              <Badge key={kw} variant="neutral">
-                {kw}
-              </Badge>
+              <Badge key={kw} variant="neutral">{kw}</Badge>
             ))}
           </div>
         </div>
@@ -239,29 +175,50 @@ export default function NumerologyPage() {
   );
   const [loading, setLoading] = useState(false);
 
-  // Re-sync inputs whenever the active profile changes
+  // Tarot birth cards from API
+  const [tarotData, setTarotData] = useState<Record<string, unknown> | null>(null);
+  const [tarotLoading, setTarotLoading] = useState(false);
+  const [tarotError, setTarotError] = useState<string | null>(null);
+
+  const fetchTarotCards = (date: string) => {
+    setTarotLoading(true);
+    setTarotError(null);
+    api.personality
+      .tarotBirthCards(date)
+      .then((res) => setTarotData(res.data))
+      .catch((err) => {
+        console.error("Tarot birth cards API error:", err);
+        const status = (err as { status?: number }).status;
+        if (status === 404) {
+          setTarotError("Tarot birth cards endpoint is not yet available.");
+        } else if (status === 422) {
+          setTarotError("Invalid birth date for tarot calculation.");
+        } else {
+          setTarotError("Failed to load tarot birth cards.");
+        }
+      })
+      .finally(() => setTarotLoading(false));
+  };
+
   useEffect(() => {
     if (activeProfile) {
       setFullName(activeProfile.name);
       setBirthDate(activeProfile.birthDate);
       setCalculated(Boolean(activeProfile.name && activeProfile.birthDate));
+      fetchTarotCards(activeProfile.birthDate);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile]);
 
-  // Compute numbers reactively
   const numbers = useMemo(() => {
     const lifePath = lifePathFromBirth(birthDate);
     const expression = expressionNumber(fullName);
     const soulUrge = soulUrgeNumber(fullName);
     const personality = personalityNumber(fullName);
     const personalYear = personalYearNumber(birthDate, new Date().getFullYear());
-
     const active = new Set<number>(
-      [lifePath, expression, soulUrge, personality, personalYear].filter(
-        isMasterNumber,
-      ),
+      [lifePath, expression, soulUrge, personality, personalYear].filter(isMasterNumber),
     );
-
     return { lifePath, expression, soulUrge, personality, personalYear, active };
   }, [fullName, birthDate]);
 
@@ -269,13 +226,13 @@ export default function NumerologyPage() {
 
   const handleCalculate = () => {
     setLoading(true);
+    if (birthDate) fetchTarotCards(birthDate);
     setTimeout(() => {
       setCalculated(true);
       setLoading(false);
     }, 400);
   };
 
-  // Empty state -- no profile yet
   if (!activeProfile && !fullName && !birthDate) {
     return (
       <div className="mx-auto max-w-3xl">
@@ -289,8 +246,7 @@ export default function NumerologyPage() {
           <div className="space-y-4">
             <p className="text-sm leading-relaxed text-text-secondary">
               Add a profile with your full birth name and birth date to see
-              your Life Path, Expression, Soul Urge, Personality, and Personal
-              Year numbers.
+              your numerology and tarot birth cards.
             </p>
             <Link href="/dashboard/settings">
               <Button>Add your first profile</Button>
@@ -306,6 +262,10 @@ export default function NumerologyPage() {
   const soulUrgeInfo = meaningFor(numbers.soulUrge);
   const personalityInfo = meaningFor(numbers.personality);
   const personalYearInfo = meaningFor(numbers.personalYear);
+
+  const birthCard = tarotData?.birth_card as TarotCard | undefined;
+  const personalityCard = tarotData?.personality_card as TarotCard | undefined;
+  const yearCard = tarotData?.year_card as TarotCard | undefined;
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -340,6 +300,112 @@ export default function NumerologyPage() {
           </div>
         </div>
       </Card>
+
+      {/* Tarot Birth Cards Section */}
+      {tarotLoading && (
+        <div className="flex justify-center py-8">
+          <Spinner className="h-8 w-8" />
+        </div>
+      )}
+
+      {tarotError && (
+        <div className="mb-4 rounded-lg border border-accent-rose/30 bg-accent-rose/10 px-4 py-2.5 text-sm text-accent-rose">
+          {tarotError}
+        </div>
+      )}
+
+      {tarotData && !tarotLoading && (
+        <div className="mb-6 animate-fade-in">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            Tarot Birth Cards
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {birthCard && (
+              <Card title="Birth Card" glow="purple">
+                <div className="space-y-2">
+                  <p className="text-lg font-bold text-accent-purple">
+                    {birthCard.name ?? "Unknown"}
+                    {birthCard.number != null && (
+                      <span className="ml-2 text-sm font-normal text-text-muted">
+                        ({birthCard.number})
+                      </span>
+                    )}
+                  </p>
+                  {birthCard.meaning && (
+                    <p className="text-sm text-text-secondary">{birthCard.meaning}</p>
+                  )}
+                  {birthCard.keywords && birthCard.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {birthCard.keywords.map((kw) => (
+                        <Badge key={kw} variant="info">{kw}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {personalityCard && (
+              <Card title="Personality Card" glow="blue">
+                <div className="space-y-2">
+                  <p className="text-lg font-bold text-accent-blue">
+                    {personalityCard.name ?? "Unknown"}
+                    {personalityCard.number != null && (
+                      <span className="ml-2 text-sm font-normal text-text-muted">
+                        ({personalityCard.number})
+                      </span>
+                    )}
+                  </p>
+                  {personalityCard.meaning && (
+                    <p className="text-sm text-text-secondary">{personalityCard.meaning}</p>
+                  )}
+                  {personalityCard.keywords && personalityCard.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {personalityCard.keywords.map((kw) => (
+                        <Badge key={kw} variant="info">{kw}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {yearCard && (
+              <Card title={`Year Card (${currentYear})`}>
+                <div className="space-y-2">
+                  <p className="text-lg font-bold text-accent-emerald">
+                    {yearCard.name ?? "Unknown"}
+                    {yearCard.number != null && (
+                      <span className="ml-2 text-sm font-normal text-text-muted">
+                        ({yearCard.number})
+                      </span>
+                    )}
+                  </p>
+                  {yearCard.meaning && (
+                    <p className="text-sm text-text-secondary">{yearCard.meaning}</p>
+                  )}
+                  {yearCard.keywords && yearCard.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {yearCard.keywords.map((kw) => (
+                        <Badge key={kw} variant="info">{kw}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {/* Fallback: show raw tarot data if no structured cards found */}
+            {!birthCard && !personalityCard && !yearCard && (
+              <Card title="Tarot Birth Cards" className="sm:col-span-2 lg:col-span-3">
+                <pre className="overflow-x-auto text-xs text-text-secondary whitespace-pre-wrap">
+                  {JSON.stringify(tarotData, null, 2)}
+                </pre>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
 
       {calculated && (
         <div className="animate-fade-in space-y-6">
@@ -447,9 +513,7 @@ export default function NumerologyPage() {
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {personalYearInfo.keywords.map((kw) => (
-                    <Badge key={kw} variant="info">
-                      {kw}
-                    </Badge>
+                    <Badge key={kw} variant="info">{kw}</Badge>
                   ))}
                 </div>
               </div>

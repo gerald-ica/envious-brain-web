@@ -229,7 +229,10 @@ export default function ConfigPage() {
     <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text-primary">Configuration</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-text-primary">Configuration</h1>
+          <Badge variant="info">Coming Soon</Badge>
+        </div>
         <p className="mt-1 text-sm text-text-muted">
           Feature flags, dynamic config, plugins, and system information
         </p>

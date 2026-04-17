@@ -282,7 +282,10 @@ export default function AuditPage() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Audit Trail</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-text-primary">Audit Trail</h1>
+            <Badge variant="info">Coming Soon</Badge>
+          </div>
           <p className="mt-1 text-sm text-text-muted">
             Searchable log of all system events and user actions
           </p>

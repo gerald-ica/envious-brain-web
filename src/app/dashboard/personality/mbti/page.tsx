@@ -1,178 +1,76 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProfile } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/loading";
 
-// ---- Mock Data ----
+// ---------------------------------------------------------------------------
+// MBTI — via /api/v1/personality/calculate (synthesis endpoint)
+// ---------------------------------------------------------------------------
 
-const TYPE = {
-  code: "INTJ",
-  name: "The Architect",
-  description:
-    "Strategic, independent, and determined. INTJs are visionary thinkers who excel at creating and implementing complex systems. They combine imagination with reliability, approaching life with a chess-master's foresight.",
-};
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
-const COGNITIVE_FUNCTIONS = [
-  {
-    code: "Ni",
-    name: "Introverted Intuition",
-    position: "Dominant (Hero)",
-    strength: 95,
-    description:
-      "Core perceiving function. Synthesizes unconscious patterns into sudden insights and long-range vision. Drives the signature INTJ ability to foresee consequences and construct mental models of the future.",
-    isShadow: false,
-  },
-  {
-    code: "Te",
-    name: "Extraverted Thinking",
-    position: "Auxiliary (Parent)",
-    strength: 85,
-    description:
-      "Organizes the external world through logical systems, metrics, and efficiency. Translates Ni visions into actionable plans with measurable outcomes.",
-    isShadow: false,
-  },
-  {
-    code: "Fi",
-    name: "Introverted Feeling",
-    position: "Tertiary (Child)",
-    strength: 55,
-    description:
-      "Inner moral compass and personal values. Develops with maturity, adding depth of conviction and authenticity to the INTJ's logical framework.",
-    isShadow: false,
-  },
-  {
-    code: "Se",
-    name: "Extraverted Sensing",
-    position: "Inferior (Aspirational)",
-    strength: 30,
-    description:
-      "Present-moment sensory awareness. Under stress can manifest as overindulgence; when developed, grants a grounding connection to physical reality.",
-    isShadow: false,
-  },
-  {
-    code: "Ne",
-    name: "Extraverted Intuition",
-    position: "Opposing (5th)",
-    strength: 25,
-    description:
-      "Shadow of Ni. Can become argumentative about possibilities or dismissive of brainstorming. When integrated, allows broader exploration of ideas.",
-    isShadow: true,
-  },
-  {
-    code: "Ti",
-    name: "Introverted Thinking",
-    position: "Critical Parent (6th)",
-    strength: 20,
-    description:
-      "Shadow of Te. May manifest as harsh internal criticism or obsessive logical analysis. Integration allows nuanced personal reasoning.",
-    isShadow: true,
-  },
-  {
-    code: "Fe",
-    name: "Extraverted Feeling",
-    position: "Trickster (7th)",
-    strength: 12,
-    description:
-      "Shadow of Fi. Social harmony functions feel foreign and manipulative. Integration unlocks genuine communal empathy and group awareness.",
-    isShadow: true,
-  },
-  {
-    code: "Si",
-    name: "Introverted Sensing",
-    position: "Demon (8th)",
-    strength: 8,
-    description:
-      "Shadow of Se. Can trigger overwhelming nostalgia or physical hypochondria under extreme stress. Deepest unconscious function.",
-    isShadow: true,
-  },
-];
+const MBTI_TYPES = [
+  "INTJ", "INTP", "ENTJ", "ENTP",
+  "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+  "ISTP", "ISFP", "ESTP", "ESFP",
+] as const;
 
-const FAMOUS_PEOPLE = [
-  { name: "Nikola Tesla", field: "Inventor" },
-  { name: "Isaac Newton", field: "Physicist" },
-  { name: "Friedrich Nietzsche", field: "Philosopher" },
-  { name: "Ayn Rand", field: "Author" },
-  { name: "Elon Musk", field: "Entrepreneur" },
-  { name: "Michelle Obama", field: "Lawyer / Author" },
-  { name: "Christopher Nolan", field: "Director" },
-  { name: "Karl Marx", field: "Philosopher" },
-];
-
-const SHADOW_INTEGRATION = [
-  {
-    title: "Ne Integration",
-    status: "In Progress",
-    tip: "Practice brainstorming without judgment. Allow 10 minutes of open-ended ideation daily before filtering with Ni.",
-  },
-  {
-    title: "Ti Integration",
-    status: "Emerging",
-    tip: "When your inner critic activates, pause and ask: is this Te efficiency or Ti perfectionism? Name the difference.",
-  },
-  {
-    title: "Fe Integration",
-    status: "Undeveloped",
-    tip: "Observe group emotional dynamics without trying to fix them. Practice mirroring others' feelings before offering solutions.",
-  },
-  {
-    title: "Si Integration",
-    status: "Unconscious",
-    tip: "Create grounding rituals tied to positive memories. Use journaling to build a healthy relationship with your past.",
-  },
-];
-
-// ---- Strength Bar Component ----
-
-function StrengthBar({
-  label,
-  code,
-  value,
-  isShadow,
-}: {
-  label: string;
-  code: string;
-  value: number;
-  isShadow: boolean;
-}) {
+function StrengthBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.round(value * 100);
   return (
     <div className="flex items-center gap-3">
-      <span
-        className={`w-8 text-xs font-mono font-bold ${isShadow ? "text-accent-purple/70" : "text-accent-blue"}`}
-      >
-        {code}
-      </span>
-      <span className="w-28 text-xs text-text-muted truncate">{label}</span>
+      <span className="w-28 text-xs text-text-muted">{label}</span>
       <div className="flex-1 h-2.5 rounded-full bg-white/5 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${
-            isShadow
-              ? "bg-gradient-to-r from-accent-purple/60 to-accent-purple/30"
-              : "bg-gradient-to-r from-accent-blue to-accent-blue/60"
-          }`}
-          style={{ width: `${value}%` }}
-        />
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-10 text-right text-xs font-mono text-text-muted">
-        {value}%
-      </span>
+      <span className="w-10 text-right text-xs font-mono text-text-secondary">{pct}%</span>
     </div>
   );
 }
 
-// ---- Page ----
-
 export default function MBTIPage() {
   const { activeProfile } = useProfile();
+  const [selectedType, setSelectedType] = useState("INTJ");
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async (mbtiType: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/personality/calculate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mbti_type: mbtiType }),
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      setData(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load MBTI data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(selectedType);
+  }, [selectedType]);
 
   if (!activeProfile) {
     return (
       <div className="mx-auto max-w-3xl p-6">
         <Card title="No Profile Selected">
           <p className="text-text-secondary mb-4">
-            Create a birth profile to view your MBTI personality analysis.
+            Create a birth profile to explore MBTI personality types.
           </p>
           <Link href="/dashboard/settings">
             <Button>Go to Settings</Button>
@@ -182,151 +80,140 @@ export default function MBTIPage() {
     );
   }
 
+  const baseWeights = data?.base_weights as Record<string, number> | undefined;
+  const finalWeights = data?.final_weights as Record<string, number> | undefined;
+  const dominant = data?.dominant_function as string | undefined;
+  const auxiliary = data?.auxiliary_function as string | undefined;
+  const state = data?.personality_state as string | undefined;
+  const narrative = data?.narrative_summary as string | undefined;
+
   return (
     <div className="mx-auto max-w-7xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-bold text-text-primary">
-            MBTI Profile for {activeProfile.name}
-          </h1>
-          <Badge variant="info">{TYPE.code}</Badge>
-          <Badge variant="neutral">{TYPE.name}</Badge>
-        </div>
-        <p className="text-sm leading-relaxed text-text-secondary max-w-3xl">
-          {TYPE.description}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-text-primary">
+          MBTI Cognitive Functions
+        </h1>
+        <p className="mt-1 text-sm text-text-muted">
+          Jungian cognitive function analysis for {activeProfile.name}
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* ---- Cognitive Function Stack ---- */}
-        <Card title="Cognitive Function Stack" glow="blue" className="lg:col-span-2">
-          <div className="space-y-3">
-            <div className="mb-4">
-              <p className="text-xs text-text-muted mb-3">
-                Primary Stack (Conscious)
-              </p>
-              {COGNITIVE_FUNCTIONS.filter((f) => !f.isShadow).map((fn) => (
-                <div key={fn.code} className="mb-2">
-                  <StrengthBar
-                    label={fn.position}
-                    code={fn.code}
-                    value={fn.strength}
-                    isShadow={false}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-border pt-4">
-              <p className="text-xs text-text-muted mb-3">
-                Shadow Stack (Unconscious)
-              </p>
-              {COGNITIVE_FUNCTIONS.filter((f) => f.isShadow).map((fn) => (
-                <div key={fn.code} className="mb-2">
-                  <StrengthBar
-                    label={fn.position}
-                    code={fn.code}
-                    value={fn.strength}
-                    isShadow={true}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+      {/* Type selector */}
+      <Card title="Select MBTI Type" className="mb-6">
+        <div className="flex flex-wrap gap-2">
+          {MBTI_TYPES.map((t) => (
+            <button
+              key={t}
+              onClick={() => setSelectedType(t)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-colors ${
+                selectedType === t
+                  ? "bg-accent-purple/20 text-accent-purple border border-accent-purple/40"
+                  : "bg-white/5 text-text-secondary hover:bg-white/10"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </Card>
 
-        {/* ---- Function Descriptions ---- */}
-        <Card title="Function Descriptions" className="lg:col-span-2">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {COGNITIVE_FUNCTIONS.map((fn) => (
-              <div
-                key={fn.code}
-                className={`rounded-lg border p-3 ${
-                  fn.isShadow
-                    ? "border-accent-purple/20 bg-accent-purple/5"
-                    : "border-border bg-white/[0.02]"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span
-                    className={`text-sm font-bold font-mono ${
-                      fn.isShadow ? "text-accent-purple" : "text-accent-blue"
-                    }`}
-                  >
-                    {fn.code}
-                  </span>
-                  <span className="text-sm font-medium text-text-primary">
-                    {fn.name}
-                  </span>
-                </div>
-                <p className="text-xs text-text-muted mb-1">{fn.position}</p>
-                <p className="text-xs leading-relaxed text-text-secondary">
-                  {fn.description}
-                </p>
+      {loading && (
+        <div className="flex justify-center py-12">
+          <Spinner className="h-8 w-8" />
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-accent-rose/30 bg-accent-rose/10 px-4 py-2.5 text-sm text-accent-rose">
+          {error}
+        </div>
+      )}
+
+      {data && !loading && (
+        <div className="animate-fade-in space-y-6">
+          {/* Core info */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card title="Type">
+              <p className="text-3xl font-bold text-accent-purple">{data.mbti_type as string}</p>
+            </Card>
+            <Card title="Dominant Function">
+              <p className="text-lg font-medium text-text-primary">{dominant ?? "--"}</p>
+              {state ? (
+                <Badge variant="info" className="mt-2">{state}</Badge>
+              ) : null}
+            </Card>
+            <Card title="Auxiliary Function">
+              <p className="text-lg font-medium text-text-primary">{auxiliary ?? "--"}</p>
+            </Card>
+          </div>
+
+          {/* Narrative */}
+          {narrative ? (
+            <Card title="Narrative Summary">
+              <p className="text-sm text-text-secondary leading-relaxed">{narrative}</p>
+            </Card>
+          ) : null}
+
+          {/* Cognitive function weights */}
+          {finalWeights && (
+            <Card title="Cognitive Function Weights">
+              <div className="space-y-3">
+                {Object.entries(finalWeights)
+                  .sort(([, a], [, b]) => (b as number) - (a as number))
+                  .map(([fn, weight]) => (
+                    <StrengthBar
+                      key={fn}
+                      label={fn}
+                      value={weight as number}
+                      color={fn === dominant ? "bg-accent-purple" : "bg-accent-blue"}
+                    />
+                  ))}
               </div>
-            ))}
-          </div>
-        </Card>
+            </Card>
+          )}
 
-        {/* ---- Famous People ---- */}
-        <Card title="Famous INTJs">
-          <div className="grid grid-cols-2 gap-2">
-            {FAMOUS_PEOPLE.map((person) => (
-              <div
-                key={person.name}
-                className="flex items-center gap-2 rounded-lg bg-white/[0.02] px-3 py-2"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-blue/10 text-xs font-bold text-accent-blue">
-                  {person.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    {person.name}
-                  </p>
-                  <p className="text-xs text-text-muted">{person.field}</p>
-                </div>
+          {/* Base vs final comparison */}
+          {baseWeights && finalWeights && (
+            <Card title="Base vs Modified Weights">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left">
+                      <th className="pb-2 pr-4 font-medium text-text-muted">Function</th>
+                      <th className="pb-2 pr-4 font-medium text-text-muted">Base</th>
+                      <th className="pb-2 pr-4 font-medium text-text-muted">Final</th>
+                      <th className="pb-2 font-medium text-text-muted">Change</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(finalWeights).map((fn) => {
+                      const base = (baseWeights[fn] as number) ?? 0;
+                      const final_ = (finalWeights[fn] as number) ?? 0;
+                      const diff = final_ - base;
+                      return (
+                        <tr key={fn} className="border-b border-border/50 last:border-0">
+                          <td className="py-2 pr-4 font-medium text-text-primary">{fn}</td>
+                          <td className="py-2 pr-4 font-mono text-text-secondary">
+                            {(base * 100).toFixed(0)}%
+                          </td>
+                          <td className="py-2 pr-4 font-mono text-text-secondary">
+                            {(final_ * 100).toFixed(0)}%
+                          </td>
+                          <td className="py-2">
+                            <Badge variant={diff > 0 ? "healthy" : diff < 0 ? "degraded" : "neutral"}>
+                              {diff > 0 ? "+" : ""}{(diff * 100).toFixed(1)}%
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* ---- Shadow Integration ---- */}
-        <Card title="Shadow Integration" glow="purple">
-          <div className="space-y-3">
-            {SHADOW_INTEGRATION.map((item) => {
-              const statusColor =
-                item.status === "In Progress"
-                  ? "healthy"
-                  : item.status === "Emerging"
-                    ? "degraded"
-                    : item.status === "Undeveloped"
-                      ? "error"
-                      : "neutral";
-              return (
-                <div
-                  key={item.title}
-                  className="rounded-lg border border-border bg-white/[0.02] p-3"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-text-primary">
-                      {item.title}
-                    </span>
-                    <Badge variant={statusColor as "healthy" | "degraded" | "error" | "neutral"}>
-                      {item.status}
-                    </Badge>
-                  </div>
-                  <p className="text-xs leading-relaxed text-text-secondary">
-                    {item.tip}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
