@@ -12,11 +12,12 @@ import { CitySearch } from "@/components/ui/city-search";
 // Types & Constants
 // ---------------------------------------------------------------------------
 
-type LLMProvider = "openai" | "anthropic" | "openrouter" | "cerebras" | "ollama";
+type LLMProvider = "vercel" | "openai" | "anthropic" | "openrouter" | "cerebras" | "ollama";
 type AccentColor = "blue" | "purple" | "emerald" | "amber" | "rose";
 type Language = "EN" | "ES" | "FR" | "PT" | "ZH";
 
 const LLM_PROVIDERS: { id: LLMProvider; label: string; defaultModel: string }[] = [
+  { id: "vercel", label: "Vercel AI", defaultModel: "alibaba/qwen3.6-plus" },
   { id: "openai", label: "OpenAI", defaultModel: "gpt-4o" },
   { id: "anthropic", label: "Anthropic", defaultModel: "claude-sonnet-4-20250514" },
   { id: "openrouter", label: "OpenRouter", defaultModel: "auto" },
@@ -73,7 +74,7 @@ export default function SettingsPage() {
   const [eTz, setETz] = useState("");
 
   // ---- LLM Configuration ----
-  const [llmProvider, setLlmProvider] = useState<LLMProvider>("openai");
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>("vercel");
   const [modelOverride, setModelOverride] = useState("");
   const [temperature, setTemperature] = useState(0.7);
   const [apiKey, setApiKey] = useState("");
@@ -493,12 +494,20 @@ export default function SettingsPage() {
             </div>
 
             {/* Model Override */}
-            <Input
-              label="Model Override"
-              placeholder={currentProvider?.defaultModel ?? "Leave blank for default"}
-              value={modelOverride}
-              onChange={(e) => setModelOverride(e.target.value)}
-            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-secondary">Model Override</label>
+              <input
+                type="text"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                placeholder={currentProvider?.defaultModel ?? "Leave blank for default"}
+                value={modelOverride}
+                onChange={(e) => setModelOverride(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue/50"
+              />
+              <p className="text-xs text-text-muted">Current: {currentProvider?.defaultModel}</p>
+            </div>
 
             {/* Temperature Slider */}
             <div className="flex flex-col gap-1.5">
@@ -522,11 +531,15 @@ export default function SettingsPage() {
 
             {/* API Key */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-secondary">API Key</label>
+              <label className="text-sm font-medium text-text-secondary">API Key (optional override)</label>
               <div className="flex items-center gap-2">
                 <input
                   type={showApiKey ? "text" : "password"}
-                  placeholder="sk-..."
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  name="llm-api-key-override"
+                  placeholder={llmProvider === "vercel" ? "Pre-configured — no key needed" : "sk-..."}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted focus:border-accent-blue focus:outline-none focus:ring-1 focus:ring-accent-blue/50"
@@ -540,7 +553,9 @@ export default function SettingsPage() {
                 </Button>
               </div>
               <p className="text-xs text-text-muted">
-                Stored locally. Never sent to our servers.
+                {llmProvider === "vercel"
+                  ? "Vercel AI Gateway is pre-configured. No API key required."
+                  : "Stored locally. Never sent to our servers."}
               </p>
             </div>
           </div>

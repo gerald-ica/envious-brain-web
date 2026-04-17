@@ -137,10 +137,8 @@ export default function FixedStarsPage() {
               </div>
             </Card>
           ) : (
-            <Card title="Results">
-              <pre className="overflow-x-auto text-xs text-text-secondary whitespace-pre-wrap">
-                {JSON.stringify(data, null, 2)}
-              </pre>
+            <Card title="Fixed Star Conjunctions">
+              <p className="text-sm text-text-muted">No fixed star conjunctions found within the standard orb for this chart.</p>
             </Card>
           )}
         </div>
