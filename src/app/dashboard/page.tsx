@@ -7,6 +7,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/loading";
+import { BiorhythmChart } from "@/components/charts/biorhythm-chart";
+import { motion } from "framer-motion";
+import {
+  Sun, Moon, ArrowUp, Hash, Sparkles, TrendingUp,
+  Activity, Flame, Droplets, Wind, Mountain,
+  CircleDot, Orbit, Star, MessageCircle,
+} from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // API
@@ -43,80 +50,96 @@ interface TransitItem {
   aspect?: string;
   type?: string;
   degree?: number;
+  natalPlanet?: string;
+  orb?: number;
 }
 
 interface DashboardData {
   sunSign: string | null;
   moonSign: string | null;
   ascendant: string | null;
+  sunDegree: number | null;
+  moonDegree: number | null;
+  ascDegree: number | null;
   mbtiType: string | null;
   enneagram: string | null;
   lifePathNumber: number | null;
   transits: TransitItem[];
   biorhythm: { physical: number; emotional: number; intellectual: number } | null;
   forecast: string | null;
+  elements: { Fire: number; Earth: number; Air: number; Water: number };
 }
 
 // ---------------------------------------------------------------------------
-// Biorhythm mini bar
+// Constants
 // ---------------------------------------------------------------------------
 
-function BiorhythmBar({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  const normalized = Math.abs(value);
-  const isPositive = value >= 0;
+const SIGN_ELEMENT: Record<string, "Fire" | "Earth" | "Air" | "Water"> = {
+  Aries: "Fire", Taurus: "Earth", Gemini: "Air", Cancer: "Water",
+  Leo: "Fire", Virgo: "Earth", Libra: "Air", Scorpio: "Water",
+  Sagittarius: "Fire", Capricorn: "Earth", Aquarius: "Air", Pisces: "Water",
+};
 
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-24 text-xs text-text-muted">{label}</span>
-      <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${color}`}
-          style={{ width: `${normalized}%` }}
-        />
-      </div>
-      <span
-        className={`w-12 text-right text-xs font-mono ${
-          isPositive ? "text-accent-emerald" : "text-accent-rose"
-        }`}
-      >
-        {isPositive ? "+" : ""}
-        {value}%
-      </span>
-    </div>
-  );
+const ELEMENT_CONFIG = [
+  { key: "Fire" as const, icon: Flame, color: "text-rose-400", bg: "bg-rose-400", border: "border-rose-400/30" },
+  { key: "Earth" as const, icon: Mountain, color: "text-emerald-400", bg: "bg-emerald-400", border: "border-emerald-400/30" },
+  { key: "Air" as const, icon: Wind, color: "text-blue-400", bg: "bg-blue-400", border: "border-blue-400/30" },
+  { key: "Water" as const, icon: Droplets, color: "text-purple-400", bg: "bg-purple-400", border: "border-purple-400/30" },
+];
+
+const LIFE_PATH_KEYWORDS: Record<number, string> = {
+  1: "Leader", 2: "Diplomat", 3: "Creative", 4: "Builder", 5: "Explorer",
+  6: "Nurturer", 7: "Seeker", 8: "Powerhouse", 9: "Humanitarian",
+  11: "Visionary", 22: "Master Builder", 33: "Master Teacher",
+};
+
+const SIGN_DESCRIPTIONS: Record<string, string> = {
+  Aries: "bold pioneer", Taurus: "grounded creator", Gemini: "curious communicator",
+  Cancer: "intuitive guardian", Leo: "confident leader", Virgo: "meticulous analyst",
+  Libra: "harmonious diplomat", Scorpio: "intense transformer", Sagittarius: "adventurous seeker",
+  Capricorn: "ambitious strategist", Aquarius: "visionary innovator", Pisces: "empathic dreamer",
+};
+
+function getHeroDescription(sun: string | null, moon: string | null, asc: string | null): string {
+  if (!sun) return "Discover your cosmic identity by loading your natal chart.";
+  const sunDesc = SIGN_DESCRIPTIONS[sun] || sun.toLowerCase();
+  const moonDesc = moon ? SIGN_DESCRIPTIONS[moon] || moon.toLowerCase() : null;
+  const ascDesc = asc ? SIGN_DESCRIPTIONS[asc] || asc.toLowerCase() : null;
+  let desc = `The ${sunDesc}`;
+  if (moonDesc) desc += ` with the emotional depth of a ${moonDesc}`;
+  if (ascDesc) desc += ` and the presence of a ${ascDesc}`;
+  return desc;
+}
+
+const ASPECT_COLORS: Record<string, string> = {
+  conjunction: "border-l-blue-400",
+  trine: "border-l-emerald-400",
+  sextile: "border-l-emerald-400",
+  square: "border-l-amber-400",
+  opposition: "border-l-rose-400",
+};
+
+function getAspectBorder(aspect?: string): string {
+  if (!aspect) return "border-l-text-muted";
+  const lower = aspect.toLowerCase();
+  for (const [key, val] of Object.entries(ASPECT_COLORS)) {
+    if (lower.includes(key)) return val;
+  }
+  return "border-l-blue-400";
 }
 
 // ---------------------------------------------------------------------------
-// Skeleton cards for loading state
+// Animations
 // ---------------------------------------------------------------------------
 
-function DashboardSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: 7 }, (_, i) => (
-        <div
-          key={i}
-          className={`rounded-xl border border-border bg-card p-5 ${
-            i === 4 ? "sm:col-span-2" : ""
-          } ${i === 6 ? "sm:col-span-2 lg:col-span-3 xl:col-span-4" : ""}`}
-        >
-          <Skeleton className="mb-3 h-4 w-24" />
-          <Skeleton className="mb-2 h-6 w-full" />
-          <Skeleton className="mb-2 h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      ))}
-    </div>
-  );
-}
+const fadeUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+};
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
 
 // ---------------------------------------------------------------------------
 // Dashboard page
@@ -147,12 +170,16 @@ export default function DashboardPage() {
       sunSign: null,
       moonSign: null,
       ascendant: null,
+      sunDegree: null,
+      moonDegree: null,
+      ascDegree: null,
       mbtiType: null,
       enneagram: null,
       lifePathNumber: null,
       transits: [],
       biorhythm: null,
       forecast: null,
+      elements: { Fire: 0, Earth: 0, Air: 0, Water: 0 },
     };
 
     let anySuccess = false;
@@ -174,28 +201,40 @@ export default function DashboardPage() {
         chartData = json.data ?? json;
 
         // Extract Sun, Moon, Ascendant from positions object
-        // The backend returns positions as { Sun: { sign, degree, ... }, Moon: { ... }, ... }
         const positions = chartData.positions ?? chartData.planets ?? {};
 
         if (positions && typeof positions === "object" && !Array.isArray(positions)) {
-          // Object format: { Sun: { sign: "Gemini", longitude: 84.2, ... }, ... }
           for (const [planet, data] of Object.entries(positions)) {
             const pData = data as Record<string, unknown>;
             const name = planet.toLowerCase();
-            if (name === "sun") result.sunSign = pData.sign as string;
-            else if (name === "moon") result.moonSign = pData.sign as string;
+            if (name === "sun") {
+              result.sunSign = pData.sign as string;
+              result.sunDegree = (pData.longitude ?? null) as number | null;
+            } else if (name === "moon") {
+              result.moonSign = pData.sign as string;
+              result.moonDegree = (pData.longitude ?? null) as number | null;
+            }
 
             // Build natal longitude map for transits endpoint
             if (typeof pData.longitude === "number") {
               natalPositions[planet] = pData.longitude;
             }
+
+            // Count elements
+            const sign = pData.sign as string;
+            if (sign && SIGN_ELEMENT[sign]) {
+              result.elements[SIGN_ELEMENT[sign]]++;
+            }
           }
         } else if (Array.isArray(positions)) {
-          // Array format: [{ planet: "Sun", sign: "Gemini", ... }, ...]
           for (const pos of positions as NatalPosition[]) {
             const name = (pos.planet ?? "").toLowerCase();
             if (name === "sun") result.sunSign = pos.sign;
             else if (name === "moon") result.moonSign = pos.sign;
+            const sign = pos.sign;
+            if (sign && SIGN_ELEMENT[sign]) {
+              result.elements[SIGN_ELEMENT[sign]]++;
+            }
           }
         }
 
@@ -206,9 +245,11 @@ export default function DashboardPage() {
             (h: Record<string, unknown>) =>
               h.house === 1 || h.number === 1,
           );
-          if (h1) result.ascendant = (h1 as Record<string, unknown>).sign as string;
+          if (h1) {
+            result.ascendant = (h1 as Record<string, unknown>).sign as string;
+            result.ascDegree = ((h1 as Record<string, unknown>).degree ?? (h1 as Record<string, unknown>).longitude ?? null) as number | null;
+          }
         }
-        // Fallback: some responses have ascendant at top level
         if (!result.ascendant && chartData.ascendant) {
           result.ascendant =
             typeof chartData.ascendant === "string"
@@ -226,10 +267,8 @@ export default function DashboardPage() {
     result.lifePathNumber = calculateLifePath(activeProfile.birthDate);
 
     // ---- Step 2: Fire remaining calls in parallel ----
-    // These either don't depend on chart data, or we pass what we have.
     const [biorhythmRes, transitsRes, archetypesRes, forecastRes, enneagramRes, personalityRes] =
       await Promise.allSettled([
-        // Biorhythm — uses birth_date + target_date (correct schema)
         fetch(`${API_URL}/api/v1/personality/biorhythm`, {
           method: "POST",
           headers,
@@ -238,7 +277,6 @@ export default function DashboardPage() {
             target_date: today,
           }),
         }),
-        // Transits — needs natal_positions from the western chart
         Object.keys(natalPositions).length > 0
           ? fetch(`${API_URL}/api/v1/transits/current`, {
               method: "POST",
@@ -246,7 +284,6 @@ export default function DashboardPage() {
               body: JSON.stringify({ natal_positions: natalPositions }),
             })
           : Promise.reject(new Error("No natal positions available")),
-        // Jungian Archetypes — uses sun/moon/ascendant from chart
         result.sunSign
           ? fetch(`${API_URL}/api/v1/psychology/jungian-archetypes`, {
               method: "POST",
@@ -258,7 +295,6 @@ export default function DashboardPage() {
               }),
             })
           : Promise.reject(new Error("No chart data for archetypes")),
-        // Oracle daily forecast — session-based LLM, may 500
         (async () => {
           const sessionRes = await fetch(`${API_URL}/api/v1/llm/sessions`, {
             method: "POST",
@@ -288,13 +324,11 @@ export default function DashboardPage() {
           if (!msgRes.ok) throw new Error(`LLM message: ${msgRes.status}`);
           return msgRes;
         })(),
-        // Enneagram — use INTJ as default starting point
         fetch(`${API_URL}/api/v1/personality/enneagram`, {
           method: "POST",
           headers,
           body: JSON.stringify({ mbti_type: "INTJ" }),
         }),
-        // MBTI / Personality Calculate
         fetch(`${API_URL}/api/v1/personality/calculate`, {
           method: "POST",
           headers,
@@ -327,7 +361,6 @@ export default function DashboardPage() {
       try {
         const json = await transitsRes.value.json();
         const raw = json.data ?? json.transits ?? json;
-        // Could be an object keyed by planet or an array
         const arr = Array.isArray(raw)
           ? raw
           : typeof raw === "object"
@@ -349,6 +382,8 @@ export default function DashboardPage() {
               type: mapTransitType(
                 (t.aspect as string) ?? (t.aspect_type as string) ?? "",
               ),
+              natalPlanet: (t.natal_planet as string) ?? (t.target as string) ?? undefined,
+              orb: typeof t.orb === "number" ? t.orb : undefined,
             }),
           );
           anySuccess = true;
@@ -436,11 +471,8 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
-          <p className="text-sm text-text-muted">
-            Welcome to ENVI-OUS-BRAIN
-          </p>
+          <p className="text-sm text-text-muted">Welcome to ENVI-OUS-BRAIN</p>
         </div>
-
         <Card title="Create Your Profile" glow="blue">
           <div className="space-y-4">
             <p className="text-sm leading-relaxed text-text-secondary">
@@ -468,277 +500,402 @@ export default function DashboardPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
-          <p className="text-sm text-text-muted">
-            Overview for {activeProfile.name}
-          </p>
+          <p className="text-sm text-text-muted">Overview for {activeProfile.name}</p>
         </div>
-        {error && (
-          <Badge variant="degraded">{error}</Badge>
-        )}
+        {error && <Badge variant="degraded">{error}</Badge>}
       </div>
 
       {loading && !data ? (
         <DashboardSkeleton />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {/* ---- Profile Summary ---- */}
-          <Card title="Profile" glow="blue">
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-text-primary">
-                {activeProfile.name}
-              </p>
-              <p className="text-sm text-text-secondary">
-                {activeProfile.birthDate} at {activeProfile.birthTime}
-              </p>
-              <p className="text-xs text-text-muted">{activeProfile.city}</p>
-              <p className="text-xs text-text-muted">
-                {activeProfile.timezone}
-              </p>
-              <div className="pt-2 flex flex-wrap gap-1.5">
-                {data?.mbtiType && (
-                  <Badge variant="info">{data.mbtiType}</Badge>
-                )}
-                {data?.enneagram && (
-                  <Badge variant="neutral">{data.enneagram}</Badge>
-                )}
-                {data?.lifePathNumber != null && (
-                  <Badge variant="neutral">LP {data.lifePathNumber}</Badge>
-                )}
+        <motion.div
+          initial="initial"
+          animate="animate"
+          variants={stagger}
+          className="space-y-6"
+        >
+          {/* ===== HERO SECTION ===== */}
+          <motion.div variants={fadeUp}>
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-rose-500/10 p-6 sm:p-8">
+              {/* Gradient border glow effect */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-rose-500/20 opacity-50 blur-xl" />
+              <div className="relative z-10">
+                {/* Big Three */}
+                <div className="flex flex-wrap items-center gap-3 text-lg sm:text-xl font-semibold text-text-primary">
+                  {data?.sunSign && (
+                    <span className="flex items-center gap-1.5">
+                      <Sun size={22} className="text-amber-400" />
+                      {data.sunSign} Sun
+                    </span>
+                  )}
+                  {data?.moonSign && (
+                    <>
+                      <span className="text-text-muted">·</span>
+                      <span className="flex items-center gap-1.5">
+                        <Moon size={22} className="text-blue-300" />
+                        {data.moonSign} Moon
+                      </span>
+                    </>
+                  )}
+                  {data?.ascendant && (
+                    <>
+                      <span className="text-text-muted">·</span>
+                      <span className="flex items-center gap-1.5">
+                        <ArrowUp size={22} className="text-purple-400" />
+                        {data.ascendant} Rising
+                      </span>
+                    </>
+                  )}
+                  {!data?.sunSign && !loading && (
+                    <span className="text-text-muted">Chart data loading...</span>
+                  )}
+                </div>
+
+                {/* Description */}
+                <p className="mt-3 text-sm sm:text-base italic text-text-secondary max-w-2xl leading-relaxed">
+                  &ldquo;{getHeroDescription(data?.sunSign ?? null, data?.moonSign ?? null, data?.ascendant ?? null)}&rdquo;
+                </p>
+
+                {/* Personality badges */}
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {data?.lifePathNumber != null && (
+                    <Badge variant="info">
+                      Life Path {data.lifePathNumber}
+                    </Badge>
+                  )}
+                  {data?.enneagram && (
+                    <Badge variant="neutral">{data.enneagram}</Badge>
+                  )}
+                  {data?.mbtiType && (
+                    <Badge variant="info">{data.mbtiType}</Badge>
+                  )}
+                </div>
               </div>
             </div>
-          </Card>
+          </motion.div>
 
-          {/* ---- Natal Snapshot (Sun/Moon/Asc) ---- */}
-          <Card title="Natal Snapshot">
-            <div className="space-y-3">
-              <NatalRow
-                glyph={"\u2609"}
-                label="Sun"
-                value={data?.sunSign}
-                loading={loading}
-              />
-              <NatalRow
-                glyph={"\u263D"}
-                label="Moon"
-                value={data?.moonSign}
-                loading={loading}
-              />
-              <NatalRow
-                glyph={"\u2191"}
-                label="Ascendant"
-                value={data?.ascendant}
-                loading={loading}
-              />
-            </div>
-          </Card>
+          {/* ===== QUICK STATS ROW ===== */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard
+              icon={Sun}
+              iconColor="text-amber-400"
+              borderColor="border-t-amber-400"
+              degree={data?.sunDegree}
+              label="Sun"
+              sign={data?.sunSign}
+              loading={loading}
+              index={0}
+            />
+            <StatCard
+              icon={Moon}
+              iconColor="text-blue-300"
+              borderColor="border-t-blue-300"
+              degree={data?.moonDegree}
+              label="Moon"
+              sign={data?.moonSign}
+              loading={loading}
+              index={1}
+            />
+            <StatCard
+              icon={ArrowUp}
+              iconColor="text-purple-400"
+              borderColor="border-t-purple-400"
+              degree={data?.ascDegree}
+              label="ASC"
+              sign={data?.ascendant}
+              loading={loading}
+              index={2}
+            />
+            <StatCard
+              icon={Hash}
+              iconColor="text-emerald-400"
+              borderColor="border-t-emerald-400"
+              degree={null}
+              label="Life Path"
+              sign={data?.lifePathNumber != null ? LIFE_PATH_KEYWORDS[data.lifePathNumber] ?? `#${data.lifePathNumber}` : null}
+              loading={loading}
+              index={3}
+              overrideValue={data?.lifePathNumber != null ? `#${data.lifePathNumber}` : null}
+            />
+          </div>
 
-          {/* ---- Personality State ---- */}
-          <Card title="Personality State">
-            <div className="space-y-3">
-              <PersonalityRow
-                label="MBTI"
-                value={data?.mbtiType}
-                loading={loading}
-              />
-              <PersonalityRow
-                label="Enneagram"
-                value={data?.enneagram}
-                loading={loading}
-              />
-              <PersonalityRow
-                label="Life Path"
-                value={
-                  data?.lifePathNumber != null
-                    ? String(data.lifePathNumber)
-                    : null
-                }
-                loading={loading}
-              />
-            </div>
-          </Card>
-
-          {/* ---- Quick Actions ---- */}
-          <Card title="Quick Actions">
-            <div className="flex flex-col gap-2">
-              <Link href="/dashboard/charts/western">
-                <Button variant="secondary" className="w-full text-xs justify-start gap-2">
-                  {"\u2609"} View Full Chart
-                </Button>
-              </Link>
-              <Link href="/dashboard/oracle">
-                <Button variant="secondary" className="w-full text-xs justify-start gap-2">
-                  {"\u2728"} Ask the Oracle
-                </Button>
-              </Link>
-              <Link href="/dashboard/personality/synthesis">
-                <Button variant="secondary" className="w-full text-xs justify-start gap-2">
-                  {"\u{1F9E0}"} Personality Synthesis
-                </Button>
-              </Link>
-            </div>
-          </Card>
-
-          {/* ---- Active Transits ---- */}
-          <Card title="Active Transits" className="sm:col-span-2">
-            {loading && !data?.transits.length ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
-            ) : data && data.transits.length > 0 ? (
-              <div className="space-y-2">
-                {data.transits.map((t, i) => (
-                  <div
-                    key={`${t.planet}-${i}`}
-                    className="flex items-center justify-between rounded-lg bg-white/[0.02] px-3 py-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-text-primary">
-                        {t.planet}
-                      </span>
-                      <span className="text-xs text-text-muted">
-                        in {t.sign}
-                      </span>
+          {/* ===== MAIN GRID ===== */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* LEFT COLUMN: Transits + Elements */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Active Transits */}
+              <motion.div variants={fadeUp}>
+                <Card title="Active Transits">
+                  {loading && !data?.transits.length ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                      ))}
                     </div>
-                    {t.aspect && (
-                      <Badge
-                        variant={
-                          (t.type as "healthy" | "degraded" | "info") || "info"
-                        }
-                      >
-                        {t.aspect}
-                      </Badge>
-                    )}
+                  ) : data && data.transits.length > 0 ? (
+                    <motion.div
+                      initial="initial"
+                      animate="animate"
+                      variants={stagger}
+                      className="space-y-2"
+                    >
+                      {data.transits.map((t, i) => (
+                        <motion.div
+                          key={`${t.planet}-${i}`}
+                          variants={fadeUp}
+                          whileHover={{ x: 3 }}
+                          className={`rounded-lg border-l-[3px] ${getAspectBorder(t.aspect)} bg-card px-4 py-3 transition-colors hover:bg-card-hover`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Orbit size={16} className="text-text-muted" />
+                              <span className="text-sm font-medium text-text-primary">
+                                {t.planet}
+                              </span>
+                              {t.aspect && (
+                                <span className="text-xs text-text-muted">
+                                  {t.aspect}
+                                </span>
+                              )}
+                              {t.natalPlanet && (
+                                <span className="text-xs text-text-secondary">
+                                  natal {t.natalPlanet}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {t.orb != null && (
+                                <span className="text-xs font-mono text-text-muted">
+                                  orb: {t.orb.toFixed(1)}°
+                                </span>
+                              )}
+                              <Badge
+                                variant={
+                                  (t.type as "healthy" | "degraded" | "info") || "info"
+                                }
+                              >
+                                {t.sign}
+                              </Badge>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  ) : (
+                    <p className="text-sm text-text-muted">
+                      {error ? "Transit data unavailable" : "No active transits to display"}
+                    </p>
+                  )}
+                </Card>
+              </motion.div>
+
+              {/* Element Distribution */}
+              <motion.div variants={fadeUp}>
+                <Card title="Element Distribution">
+                  {data ? (
+                    <div className="space-y-3">
+                      {ELEMENT_CONFIG.map((el) => {
+                        const count = data.elements[el.key];
+                        const total = Object.values(data.elements).reduce((a, b) => a + b, 0);
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                        return (
+                          <div key={el.key} className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 w-24">
+                              <el.icon size={16} className={el.color} />
+                              <span className="text-xs text-text-muted">{el.key}</span>
+                            </div>
+                            <div className="flex-1 h-3 rounded-full bg-card overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                className={`h-full rounded-full ${el.bg} opacity-70`}
+                              />
+                            </div>
+                            <span className="w-16 text-right text-xs font-mono text-text-secondary">
+                              {count} ({pct}%)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-text-muted">Loading element data...</p>
+                  )}
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* RIGHT COLUMN: Biorhythm + Quick Actions */}
+            <div className="space-y-4">
+              {/* Biorhythm */}
+              <motion.div variants={fadeUp}>
+                <Card title="Biorhythm">
+                  {loading && !data?.biorhythm ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-4 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <BiorhythmChart birthDate={activeProfile.birthDate} days={30} />
+                  )}
+                </Card>
+              </motion.div>
+
+              {/* Quick Actions */}
+              <motion.div variants={fadeUp}>
+                <Card title="Quick Actions">
+                  <div className="flex flex-col gap-2">
+                    <Link href="/dashboard/charts/western">
+                      <motion.div whileHover={{ x: 3 }}>
+                        <Button variant="secondary" className="w-full text-xs justify-start gap-2">
+                          <Sun size={16} /> View Full Chart
+                        </Button>
+                      </motion.div>
+                    </Link>
+                    <Link href="/dashboard/oracle">
+                      <motion.div whileHover={{ x: 3 }}>
+                        <Button variant="secondary" className="w-full text-xs justify-start gap-2">
+                          <MessageCircle size={16} /> Ask the Oracle
+                        </Button>
+                      </motion.div>
+                    </Link>
+                    <Link href="/dashboard/personality/synthesis">
+                      <motion.div whileHover={{ x: 3 }}>
+                        <Button variant="secondary" className="w-full text-xs justify-start gap-2">
+                          <Activity size={16} /> Personality Synthesis
+                        </Button>
+                      </motion.div>
+                    </Link>
+                    <Link href="/dashboard/techniques/hellenistic">
+                      <motion.div whileHover={{ x: 3 }}>
+                        <Button variant="secondary" className="w-full text-xs justify-start gap-2">
+                          <Star size={16} /> Hellenistic Techniques
+                        </Button>
+                      </motion.div>
+                    </Link>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-text-muted">
-                {error
-                  ? "Transit data unavailable"
-                  : "No active transits to display"}
-              </p>
-            )}
-          </Card>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
 
-          {/* ---- Biorhythm ---- */}
-          <Card title="Biorhythm">
-            {loading && !data?.biorhythm ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-4 w-full" />
-                ))}
+          {/* ===== DAILY ORACLE CARD ===== */}
+          <motion.div variants={fadeUp}>
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 p-6">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-purple-500/10 p-2.5">
+                  <Sparkles size={20} className="text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-text-primary mb-2">Daily Oracle</h3>
+                  {loading && !data?.forecast ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  ) : data?.forecast ? (
+                    <p className="text-sm leading-relaxed text-text-secondary">
+                      {data.forecast}
+                    </p>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-text-muted mb-3">
+                        The Oracle awaits your question. Get a personalized reading based on your chart.
+                      </p>
+                      <Link href="/dashboard/oracle">
+                        <Button variant="secondary" className="text-xs gap-2">
+                          <Sparkles size={14} /> Ask the Oracle
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : data?.biorhythm ? (
-              <div className="space-y-3">
-                <BiorhythmBar
-                  label="Physical"
-                  value={data.biorhythm.physical}
-                  color="bg-accent-emerald"
-                />
-                <BiorhythmBar
-                  label="Emotional"
-                  value={data.biorhythm.emotional}
-                  color="bg-accent-blue"
-                />
-                <BiorhythmBar
-                  label="Intellectual"
-                  value={data.biorhythm.intellectual}
-                  color="bg-accent-purple"
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-text-muted">
-                Biorhythm data unavailable
-              </p>
-            )}
-          </Card>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
 
-          {/* ---- Daily Forecast ---- */}
-          <Card
-            title="Daily Forecast"
-            className="sm:col-span-2 lg:col-span-3 xl:col-span-4"
-            glow="purple"
-          >
-            {loading && !data?.forecast ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ) : data?.forecast ? (
-              <p className="text-sm leading-relaxed text-text-secondary">
-                {data.forecast}
-              </p>
-            ) : (
-              <p className="text-sm text-text-muted">
-                Daily forecast unavailable — try{" "}
-                <Link
-                  href="/dashboard/oracle"
-                  className="text-accent-blue hover:underline"
-                >
-                  asking the Oracle
-                </Link>
-              </p>
-            )}
-          </Card>
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function StatCard({
+  icon: Icon,
+  iconColor,
+  borderColor,
+  degree,
+  label,
+  sign,
+  loading: isLoading,
+  index,
+  overrideValue,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  iconColor: string;
+  borderColor: string;
+  degree: number | null | undefined;
+  label: string;
+  sign: string | null | undefined;
+  loading: boolean;
+  index: number;
+  overrideValue?: string | null;
+}) {
+  return (
+    <motion.div
+      variants={fadeUp}
+      transition={{ delay: index * 0.1 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      className={`rounded-xl border border-border border-t-2 ${borderColor} bg-card p-4 cursor-default`}
+    >
+      {isLoading && !sign ? (
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-12" />
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-10" />
         </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-1">
+            <Icon size={18} className={iconColor} />
+            <span className="text-lg font-bold text-text-primary font-mono">
+              {overrideValue ?? (degree != null ? `${Math.round(degree)}°` : "—")}
+            </span>
+          </div>
+          <p className="text-xs text-text-muted">{label}</p>
+          <p className="text-sm font-medium text-text-secondary">{sign ?? "—"}</p>
+        </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Small sub-components
-// ---------------------------------------------------------------------------
-
-function NatalRow({
-  glyph,
-  label,
-  value,
-  loading,
-}: {
-  glyph: string;
-  label: string;
-  value: string | null | undefined;
-  loading: boolean;
-}) {
+function DashboardSkeleton() {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-text-muted">
-        {glyph} {label}
-      </span>
-      {loading && !value ? (
-        <Skeleton className="h-4 w-16" />
-      ) : (
-        <span className="text-sm font-medium text-text-primary">
-          {value ?? "\u2014"}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function PersonalityRow({
-  label,
-  value,
-  loading,
-}: {
-  label: string;
-  value: string | null | undefined;
-  loading: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-text-muted">{label}</span>
-      {loading && !value ? (
-        <Skeleton className="h-4 w-16" />
-      ) : (
-        <span className="text-sm font-semibold text-accent-purple">
-          {value ?? "\u2014"}
-        </span>
-      )}
+    <div className="space-y-6">
+      <Skeleton className="h-40 w-full rounded-2xl" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-xl" />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
+      </div>
+      <Skeleton className="h-28 w-full rounded-2xl" />
     </div>
   );
 }
@@ -748,14 +905,11 @@ function PersonalityRow({
 // ---------------------------------------------------------------------------
 
 function calculateLifePath(birthDate: string): number {
-  // Pythagorean method: sum all digits of YYYY-MM-DD, reduce to single digit
-  // or master number (11, 22, 33)
   const digits = birthDate.replace(/-/g, "");
   let sum = 0;
   for (const ch of digits) {
     sum += parseInt(ch, 10);
   }
-  // Reduce: keep summing digits until single digit or master number
   while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
     let next = 0;
     while (sum > 0) {

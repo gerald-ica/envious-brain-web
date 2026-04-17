@@ -82,7 +82,23 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    try {
+      const stored = JSON.parse(localStorage.getItem("envious-brain-prefs") || "{}");
+      return stored?.state?.theme === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+
+  // Persist theme whenever it changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("envious-brain-prefs", JSON.stringify({ state: { theme } }));
+    } catch { /* best effort */ }
+  }, [theme]);
 
   // Persist profiles whenever they change
   useEffect(() => {
@@ -139,7 +155,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      if (typeof document !== "undefined") {
+        document.documentElement.classList.toggle("light", next === "light");
+        document.documentElement.classList.toggle("dark", next === "dark");
+      }
+      return next;
+    });
   }, []);
 
   const value: ProfileState = {

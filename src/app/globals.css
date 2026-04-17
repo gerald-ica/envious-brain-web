@@ -135,3 +135,35 @@ body {
 .pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }
+
+/* ---- Light Mode overrides ---- */
+
+.light {
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-navy: #f8fafc;
+  --color-surface: #ffffff;
+  --color-card: #f1f5f9;
+  --color-card-hover: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-border-hover: #cbd5e1;
+}
+
+.light body,
+.light {
+  color-scheme: light;
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light ::selection {
+  background: rgba(59, 130, 246, 0.2);
+  color: #0f172a;
+}
