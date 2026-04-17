@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useProfile } from "@/lib/store";
-import { api, type BirthData } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,22 @@ import { Spinner } from "@/components/ui/loading";
 
 // ---------------------------------------------------------------------------
 // Hellenistic Techniques (Sect, Profection, Almuten)
+// These endpoints require full_chart data which is pending backend deployment.
 // ---------------------------------------------------------------------------
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
+async function tryHellenistic(path: string, body: Record<string, unknown>) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
 
 export default function HellenisticPage() {
   const { activeProfile } = useProfile();
@@ -23,41 +37,39 @@ export default function HellenisticPage() {
 
   useEffect(() => {
     if (!activeProfile) return;
-    const birth: BirthData = {
-      date: activeProfile.birthDate,
-      time: activeProfile.birthTime,
-      latitude: activeProfile.lat,
-      longitude: activeProfile.lon,
-      timezone: activeProfile.timezone,
-    };
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      const birthPayload = {
+        datetime: `${activeProfile.birthDate}T${activeProfile.birthTime}:00`,
+        latitude: activeProfile.lat,
+        longitude: activeProfile.lon,
+      };
 
-    Promise.allSettled([
-      api.westernAdvanced.hellenistic.sect(birth),
-      api.westernAdvanced.hellenistic.profection(birth),
-      api.westernAdvanced.hellenistic.almuten(birth),
-    ])
-      .then(([sectRes, profRes, almRes]) => {
-        if (sectRes.status === "fulfilled") setSect(sectRes.value.data);
-        if (profRes.status === "fulfilled") setProfection(profRes.value.data);
-        if (almRes.status === "fulfilled") setAlmuten(almRes.value.data);
-        const failed = [sectRes, profRes, almRes].filter(
-          (r) => r.status === "rejected",
+      const results = await Promise.allSettled([
+        tryHellenistic("/api/v1/western/hellenistic/sect", birthPayload),
+        tryHellenistic("/api/v1/western/hellenistic/profection", birthPayload),
+        tryHellenistic("/api/v1/western/hellenistic/almuten", birthPayload),
+      ]);
+
+      if (cancelled) return;
+
+      const [sectRes, profRes, almRes] = results;
+      if (sectRes.status === "fulfilled") setSect(sectRes.value);
+      if (profRes.status === "fulfilled") setProfection(profRes.value);
+      if (almRes.status === "fulfilled") setAlmuten(almRes.value);
+
+      const allFailed = results.every((r) => r.status === "rejected");
+      if (allFailed) {
+        setError(
+          "Hellenistic analysis requires a full chart backend update that is currently being deployed. Check back soon.",
         );
-        if (failed.length === 3) {
-          const firstErr = (failed[0] as PromiseRejectedResult).reason;
-          const status = (firstErr as { status?: number })?.status;
-          if (status === 404) {
-            setError("Hellenistic endpoints are not yet deployed.");
-          } else if (status === 422) {
-            setError("Hellenistic analysis requires a backend update that is pending deployment. Check back soon.");
-          } else {
-            setError("Failed to load Hellenistic data. Check API connection.");
-          }
-        }
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    };
+    load();
+    return () => { cancelled = true; };
   }, [activeProfile]);
 
   if (!activeProfile) {

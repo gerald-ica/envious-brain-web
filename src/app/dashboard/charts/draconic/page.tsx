@@ -45,7 +45,7 @@ export default function DraconicChartPage() {
         if (status === 404) {
           setError("Draconic chart endpoint is not yet deployed.");
         } else if (status === 422) {
-          setError("Invalid request — check your birth profile data.");
+          setError("Draconic chart requires a backend update currently being deployed.");
         } else {
           setError("Failed to load draconic chart. Check API connection.");
         }

@@ -33,9 +33,8 @@ export default function NineStarKiPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            year: parseInt(yearStr, 10),
-            month: parseInt(monthStr, 10),
-            day: parseInt(dayStr, 10),
+            birth_year: parseInt(yearStr, 10),
+            birth_month: parseInt(monthStr, 10),
           }),
         });
         if (!res.ok) throw new Error(`API error: ${res.status}`);

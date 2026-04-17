@@ -51,7 +51,7 @@ export default function ProgressionsPage() {
   };
 
   useEffect(() => {
-    if (!activeProfile) return;
+    if (!activeProfile || !targetDate) return;
     const birth: BirthData = {
       date: activeProfile.birthDate,
       time: activeProfile.birthTime,
@@ -61,7 +61,7 @@ export default function ProgressionsPage() {
     };
     fetchData(birth, targetDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfile]);
+  }, [activeProfile, targetDate]);
 
   const handleRecalculate = () => {
     if (!activeProfile) return;

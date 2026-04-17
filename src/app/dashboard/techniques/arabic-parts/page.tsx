@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useProfile } from "@/lib/store";
-import { api, type BirthData } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,12 @@ import { Spinner } from "@/components/ui/loading";
 
 // ---------------------------------------------------------------------------
 // Arabic Parts / Lots
+// This endpoint requires full_chart data which is pending backend deployment.
 // ---------------------------------------------------------------------------
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
 function formatDegree(deg: number): string {
   const d = Math.floor(deg);
@@ -27,30 +31,39 @@ export default function ArabicPartsPage() {
 
   useEffect(() => {
     if (!activeProfile) return;
-    const birth: BirthData = {
-      date: activeProfile.birthDate,
-      time: activeProfile.birthTime,
-      latitude: activeProfile.lat,
-      longitude: activeProfile.lon,
-      timezone: activeProfile.timezone,
-    };
-    setLoading(true);
-    setError(null);
-    api.westernAdvanced
-      .arabicParts(birth)
-      .then((res) => setData(res.data))
-      .catch((err) => {
-        console.error("Arabic Parts API error:", err);
-        const status = (err as { status?: number }).status;
-        if (status === 404) {
-          setError("Arabic Parts endpoint is not yet deployed.");
-        } else if (status === 422) {
-          setError("Invalid request — check your birth profile data.");
-        } else {
-          setError("Failed to load Arabic Parts. Check API connection.");
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_URL}/api/v1/western/arabic-parts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            datetime: `${activeProfile.birthDate}T${activeProfile.birthTime}:00`,
+            latitude: activeProfile.lat,
+            longitude: activeProfile.lon,
+          }),
+        });
+        if (!res.ok) {
+          const status = res.status;
+          if (status === 422) {
+            throw new Error(
+              "Arabic Parts requires a full chart backend update that is currently being deployed. Check back soon.",
+            );
+          }
+          throw new Error(`API error ${status}`);
         }
-      })
-      .finally(() => setLoading(false));
+        const result = await res.json();
+        if (!cancelled) setData(result);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load Arabic Parts");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [activeProfile]);
 
   if (!activeProfile) {

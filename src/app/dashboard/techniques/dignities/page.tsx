@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useProfile } from "@/lib/store";
-import { api, type BirthData } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,10 @@ import { Spinner } from "@/components/ui/loading";
 // ---------------------------------------------------------------------------
 // Essential Dignities
 // ---------------------------------------------------------------------------
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
 
 const DIGNITY_VARIANT: Record<string, "healthy" | "degraded" | "info" | "neutral"> = {
   domicile: "healthy",
@@ -32,30 +35,56 @@ export default function DignitiesPage() {
 
   useEffect(() => {
     if (!activeProfile) return;
-    const birth: BirthData = {
-      date: activeProfile.birthDate,
-      time: activeProfile.birthTime,
-      latitude: activeProfile.lat,
-      longitude: activeProfile.lon,
-      timezone: activeProfile.timezone,
-    };
-    setLoading(true);
-    setError(null);
-    api.techniques
-      .dignities(birth)
-      .then((res) => setData(res.data))
-      .catch((err) => {
-        console.error("Dignities API error:", err);
-        const status = (err as { status?: number }).status;
-        if (status === 404) {
-          setError("Dignities endpoint is not yet deployed.");
-        } else if (status === 422) {
-          setError("Invalid request — check your birth profile data.");
-        } else {
-          setError("Failed to load dignities. Check API connection.");
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Step 1: Get western chart
+        const chartRes = await fetch(`${API_URL}/api/v1/charts/western`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            datetime: `${activeProfile.birthDate}T${activeProfile.birthTime}:00`,
+            latitude: activeProfile.lat,
+            longitude: activeProfile.lon,
+          }),
+        });
+        if (!chartRes.ok) throw new Error("Failed to compute natal chart");
+        const chart = await chartRes.json();
+
+        // Step 2: Transform positions to DignityChartData format
+        const planets: Record<string, { sign: string; degree: number; house: number; speed: number }> = {};
+        for (const [name, raw] of Object.entries(chart.positions ?? {})) {
+          const p = raw as Record<string, unknown>;
+          planets[name] = {
+            sign: p.sign as string,
+            degree: (p.degree_in_sign ?? p.degree ?? 0) as number,
+            house: (p.house ?? 1) as number,
+            speed: (p.speed ?? 1) as number,
+          };
         }
-      })
-      .finally(() => setLoading(false));
+
+        // Step 3: Call dignities endpoint
+        const res = await fetch(`${API_URL}/api/v1/techniques/dignities`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chart_data: { planets } }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error((body as Record<string, unknown>).detail as string ?? `${res.status}`);
+        }
+        const result = await res.json();
+        if (!cancelled) setData(result);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load dignities");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [activeProfile]);
 
   if (!activeProfile) {

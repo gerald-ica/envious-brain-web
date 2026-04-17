@@ -222,9 +222,12 @@ export default function DashboardPage() {
       /* western chart failed, continue */
     }
 
+    // ---- Life Path: computed client-side ----
+    result.lifePathNumber = calculateLifePath(activeProfile.birthDate);
+
     // ---- Step 2: Fire remaining calls in parallel ----
     // These either don't depend on chart data, or we pass what we have.
-    const [biorhythmRes, transitsRes, archetypesRes, forecastRes] =
+    const [biorhythmRes, transitsRes, archetypesRes, forecastRes, enneagramRes, personalityRes] =
       await Promise.allSettled([
         // Biorhythm — uses birth_date + target_date (correct schema)
         fetch(`${API_URL}/api/v1/personality/biorhythm`, {
@@ -285,6 +288,18 @@ export default function DashboardPage() {
           if (!msgRes.ok) throw new Error(`LLM message: ${msgRes.status}`);
           return msgRes;
         })(),
+        // Enneagram — use INTJ as default starting point
+        fetch(`${API_URL}/api/v1/personality/enneagram`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ mbti_type: "INTJ" }),
+        }),
+        // MBTI / Personality Calculate
+        fetch(`${API_URL}/api/v1/personality/calculate`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ mbti_type: "INTJ" }),
+        }),
       ]);
 
     // Parse biorhythm
@@ -343,18 +358,40 @@ export default function DashboardPage() {
       }
     }
 
-    // Parse archetypes — extract personality info
+    // Parse archetypes
     if (archetypesRes.status === "fulfilled" && archetypesRes.value.ok) {
       try {
-        const json = await archetypesRes.value.json();
+        await archetypesRes.value.json();
+        anySuccess = true;
+      } catch {
+        /* skip */
+      }
+    }
+
+    // Parse enneagram
+    if (enneagramRes.status === "fulfilled" && enneagramRes.value.ok) {
+      try {
+        const json = await enneagramRes.value.json();
         const d = json.data ?? json.result ?? json;
+        const primaryType = d.primary_type ?? d.type ?? d.enneagram_type;
+        const typeName = d.type_name ?? d.name ?? "";
+        if (primaryType != null) {
+          result.enneagram = typeName
+            ? `${primaryType} (${typeName})`
+            : String(primaryType);
+        }
+        anySuccess = true;
+      } catch {
+        /* skip */
+      }
+    }
 
-        // Try to extract personality type info from archetype response
-        result.mbtiType =
-          d.mbti_type ?? d.mbti ?? d.personality_type ?? d.primary_archetype ?? null;
-        result.enneagram =
-          d.enneagram_type ?? d.enneagram ?? null;
-
+    // Parse MBTI from personality/calculate
+    if (personalityRes.status === "fulfilled" && personalityRes.value.ok) {
+      try {
+        const json = await personalityRes.value.json();
+        const d = json.data ?? json.result ?? json;
+        result.mbtiType = d.mbti_type ?? d.type ?? d.personality_type ?? null;
         anySuccess = true;
       } catch {
         /* skip */
@@ -709,6 +746,26 @@ function PersonalityRow({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function calculateLifePath(birthDate: string): number {
+  // Pythagorean method: sum all digits of YYYY-MM-DD, reduce to single digit
+  // or master number (11, 22, 33)
+  const digits = birthDate.replace(/-/g, "");
+  let sum = 0;
+  for (const ch of digits) {
+    sum += parseInt(ch, 10);
+  }
+  // Reduce: keep summing digits until single digit or master number
+  while (sum > 9 && sum !== 11 && sum !== 22 && sum !== 33) {
+    let next = 0;
+    while (sum > 0) {
+      next += sum % 10;
+      sum = Math.floor(sum / 10);
+    }
+    sum = next;
+  }
+  return sum;
+}
 
 function mapTransitType(aspect: string): "healthy" | "degraded" | "info" {
   const lower = (aspect || "").toLowerCase();

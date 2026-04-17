@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useProfile } from "@/lib/store";
-import { api, type BirthData } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,10 @@ import { Spinner } from "@/components/ui/loading";
 // Sabian Symbols
 // ---------------------------------------------------------------------------
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+
 export default function SabianSymbolsPage() {
   const { activeProfile } = useProfile();
   const [data, setData] = useState<Record<string, unknown> | null>(null);
@@ -21,30 +24,54 @@ export default function SabianSymbolsPage() {
 
   useEffect(() => {
     if (!activeProfile) return;
-    const birth: BirthData = {
-      date: activeProfile.birthDate,
-      time: activeProfile.birthTime,
-      latitude: activeProfile.lat,
-      longitude: activeProfile.lon,
-      timezone: activeProfile.timezone,
-    };
-    setLoading(true);
-    setError(null);
-    api.techniques
-      .sabianSymbols(birth)
-      .then((res) => setData(res.data))
-      .catch((err) => {
-        console.error("Sabian symbols API error:", err);
-        const status = (err as { status?: number }).status;
-        if (status === 404) {
-          setError("Sabian symbols endpoint is not yet deployed.");
-        } else if (status === 422) {
-          setError("Invalid request — check your birth profile data.");
-        } else {
-          setError("Failed to load Sabian symbols. Check API connection.");
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Step 1: Get western chart
+        const chartRes = await fetch(`${API_URL}/api/v1/charts/western`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            datetime: `${activeProfile.birthDate}T${activeProfile.birthTime}:00`,
+            latitude: activeProfile.lat,
+            longitude: activeProfile.lon,
+          }),
+        });
+        if (!chartRes.ok) throw new Error("Failed to compute natal chart");
+        const chart = await chartRes.json();
+
+        // Step 2: Extract planet positions with longitude and sign
+        const positions: Record<string, { longitude: number; sign: string }> = {};
+        for (const [name, raw] of Object.entries(chart.positions ?? {})) {
+          const p = raw as Record<string, unknown>;
+          positions[name] = {
+            longitude: (p.longitude ?? 0) as number,
+            sign: p.sign as string,
+          };
         }
-      })
-      .finally(() => setLoading(false));
+
+        // Step 3: Call sabian-symbols endpoint
+        const res = await fetch(`${API_URL}/api/v1/techniques/sabian-symbols`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planet_positions: positions }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error((body as Record<string, unknown>).detail as string ?? `${res.status}`);
+        }
+        const result = await res.json();
+        if (!cancelled) setData(result);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load Sabian symbols");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [activeProfile]);
 
   if (!activeProfile) {
