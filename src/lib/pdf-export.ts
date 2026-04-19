@@ -82,16 +82,19 @@ const SIGN_TO_MBTI: Record<string, string> = {
   Sagittarius: "ENTP", Capricorn: "ENTJ", Aquarius: "INTP", Pisces: "INFP",
 };
 
+// Plain-text labels — jsPDF built-in fonts cannot render Unicode zodiac glyphs
 const GLYPH: Record<string, string> = {
-  Sun: "\u2609", Moon: "\u263D", Mercury: "\u263F", Venus: "\u2640",
-  Mars: "\u2642", Jupiter: "\u2643", Saturn: "\u2644", Uranus: "\u2645",
-  Neptune: "\u2646", Pluto: "\u2647", NorthNode: "\u260A", Chiron: "\u26B7",
+  Sun: "Sun", Moon: "Moon", Mercury: "Merc", Venus: "Ven",
+  Mars: "Mars", Jupiter: "Jup", Saturn: "Sat", Uranus: "Ura",
+  Neptune: "Nep", Pluto: "Plu", NorthNode: "NN", TrueNode: "TN", MeanNode: "NN",
+  Chiron: "Chi", Ceres: "Cer", Pallas: "Pal", Juno: "Jun", Vesta: "Ves",
   Ascendant: "ASC",
 };
 
 const ASPECT_GLYPH: Record<string, string> = {
-  conjunction: "\u260C", opposition: "\u260D", trine: "\u25B3",
-  square: "\u25A1", sextile: "\u2731", quincunx: "Qx",
+  conjunction: "cnj", opposition: "opp", trine: "tri",
+  square: "sqr", sextile: "sxt", quincunx: "Qx", semisextile: "SSx",
+  semisquare: "SSq", sesquiquadrate: "Ses", quintile: "Qtl",
 };
 
 const HOUSE_DOMAIN: Record<number, string> = {
@@ -543,7 +546,7 @@ export async function generateComprehensiveReport(
     doc.setFontSize(10);
     doc.setFont("times", "normal");
     doc.setTextColor(...GOLD);
-    doc.text("\u25B8", M + 4, y);
+    doc.text(">", M + 4, y);
     doc.setTextColor(...WHITE);
     const lines: string[] = doc.splitTextToSize(text, CW - 14);
     for (let i = 0; i < lines.length; i++) {
@@ -775,7 +778,7 @@ export async function generateComprehensiveReport(
   function getAspectsFor(planet: string): any[] {
     return aspects.filter((a: any) =>
       (a.planet1 === planet || a.p1 === planet || a.planet2 === planet || a.p2 === planet)
-      && Number(a.orb ?? 99) < 8
+      && Number(a.orb ?? 99) < 5
     ).sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99));
   }
   function aspectName(a: any): string {
@@ -787,6 +790,169 @@ export async function generateComprehensiveReport(
     const g2 = GLYPH[p2] || p2;
     const orb = Number(a.orb ?? 0).toFixed(1);
     return `${g1} ${g} ${g2} (${orb}\u00b0)`;
+  }
+
+  // Aspect importance classification (Bug fix #6)
+  function aspectLabel(orb: number): string {
+    if (orb <= 0.5) return "Essentially EXACT";
+    if (orb <= 1.0) return "Near-Exact Aspect";
+    if (orb <= 3.0) return "Significant Aspect";
+    return "Background Aspect";
+  }
+
+  // House finder from cusps (Bug fix #3)
+  const SIGN_ORDER = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+  function findHouse(planetLon: number, houseArr: any[]): number {
+    if (!houseArr || houseArr.length < 12) return 0;
+    const cusps = houseArr.map((h: any) => {
+      const si = SIGN_ORDER.indexOf(h.sign);
+      return ((si >= 0 ? si * 30 : 0) + (h.degree_in_sign ?? h.degree ?? 0)) % 360;
+    });
+    for (let i = 0; i < 12; i++) {
+      const start = cusps[i];
+      const end = cusps[(i + 1) % 12];
+      if (end > start) {
+        if (planetLon >= start && planetLon < end) return i + 1;
+      } else {
+        if (planetLon >= start || planetLon < end) return i + 1;
+      }
+    }
+    return 1;
+  }
+
+  // Recalculate house for all planets using cusp data (Bug fix #3)
+  if (houses.length >= 12) {
+    for (const [p, info] of Object.entries(posMap)) {
+      const computed = findHouse(info.longitude, houses);
+      if (computed > 0) posMap[p] = { ...info, house: computed };
+    }
+  }
+  // Re-extract after fix
+  const sunHouseFixed = posMap["Sun"]?.house || sunHouse;
+  const moonHouseFixed = posMap["Moon"]?.house || moonHouse;
+
+  // Planet significance one-liner (Bug fix #5)
+  function getPlanetSignificance(planet: string, sign: string, house: number): string {
+    const domiciles: Record<string, string[]> = { Sun: ["Leo"], Moon: ["Cancer"], Mercury: ["Gemini", "Virgo"], Venus: ["Taurus", "Libra"], Mars: ["Aries", "Scorpio"], Jupiter: ["Sagittarius", "Pisces"], Saturn: ["Capricorn", "Aquarius"], Uranus: ["Aquarius"], Neptune: ["Pisces"], Pluto: ["Scorpio"] };
+    const exaltations: Record<string, string> = { Sun: "Aries", Moon: "Taurus", Mercury: "Virgo", Venus: "Pisces", Mars: "Capricorn", Jupiter: "Cancer", Saturn: "Libra" };
+    const detriments: Record<string, string[]> = { Sun: ["Aquarius"], Moon: ["Capricorn"], Mercury: ["Sagittarius", "Pisces"], Venus: ["Aries", "Scorpio"], Mars: ["Taurus", "Libra"], Jupiter: ["Gemini", "Virgo"], Saturn: ["Cancer", "Leo"] };
+    const falls: Record<string, string> = { Sun: "Libra", Moon: "Scorpio", Mercury: "Pisces", Venus: "Virgo", Mars: "Cancer", Jupiter: "Capricorn", Saturn: "Aries" };
+    if (domiciles[planet]?.includes(sign)) return `Domicile - ${planet} rules ${sign}, full strength`;
+    if (exaltations[planet] === sign) return `Exalted - ${planet} at peak power in ${sign}`;
+    if (detriments[planet]?.includes(sign)) return `Detriment - ${planet} challenged in ${sign}`;
+    if (falls[planet] === sign) return `Fall - ${planet} weakened in ${sign}`;
+    const interp = PLANET_IN_SIGN[planet]?.[sign];
+    if (interp) return interp.split(".")[0];
+    return `${planet} in H${house}`;
+  }
+
+  // ASC aspects calculation (Quality improvement #7)
+  const ascLon = houses.length > 0 ? (() => {
+    const h = houses[0];
+    const si = SIGN_ORDER.indexOf(h?.sign);
+    return si >= 0 ? ((si * 30) + (h.degree_in_sign ?? h.degree ?? 0)) % 360 : 0;
+  })() : 0;
+
+  function calcAscAspects(): any[] {
+    if (!ascLon) return [];
+    const ASPECT_ANGLES = [
+      { name: "conjunction", angle: 0, orb: 8 },
+      { name: "opposition", angle: 180, orb: 8 },
+      { name: "trine", angle: 120, orb: 8 },
+      { name: "square", angle: 90, orb: 8 },
+      { name: "sextile", angle: 60, orb: 6 },
+    ];
+    const result: any[] = [];
+    for (const [planet, info] of Object.entries(posMap)) {
+      if (planet === "Ascendant" || planet === "ASC") continue;
+      const diff = Math.abs(ascLon - info.longitude);
+      const arc = diff > 180 ? 360 - diff : diff;
+      for (const asp of ASPECT_ANGLES) {
+        const orbVal = Math.abs(arc - asp.angle);
+        if (orbVal <= asp.orb) {
+          result.push({ planet1: "ASC", planet2: planet, p1: "ASC", p2: planet, aspect: asp.name, type: asp.name, orb: orbVal });
+        }
+      }
+    }
+    return result.sort((a, b) => a.orb - b.orb);
+  }
+  const ascAspectsComputed = calcAscAspects();
+
+  // Chart pattern detection (Quality improvement #8)
+  function detectPatterns(): string[] {
+    const patterns: string[] = [];
+    // Stellium: 3+ planets in the same sign
+    const signCounts: Record<string, string[]> = {};
+    for (const [p, d] of Object.entries(posMap)) {
+      if (!mainPlanets.includes(p)) continue;
+      const s = d.sign;
+      if (!signCounts[s]) signCounts[s] = [];
+      signCounts[s].push(p);
+    }
+    for (const [sign, planets] of Object.entries(signCounts)) {
+      if (planets.length >= 3) {
+        patterns.push(`Stellium in ${sign}: ${planets.join(", ")} -- a concentrated focus of energy in the domain of ${sign}. This creates an extraordinary emphasis on ${SIGN_ELEMENT[sign] || ""} qualities.`);
+      }
+    }
+    // Hemisphere emphasis
+    const upperPlanets = mainPlanets.filter(p => posMap[p] && posMap[p].house >= 7 && posMap[p].house <= 12);
+    const lowerPlanets = mainPlanets.filter(p => posMap[p] && posMap[p].house >= 1 && posMap[p].house <= 6);
+    if (upperPlanets.length >= 7) {
+      patterns.push(`Upper hemisphere emphasis (${upperPlanets.length} planets above the horizon): ${firstName}'s energy is oriented toward the public sphere, career, and social contribution.`);
+    } else if (lowerPlanets.length >= 7) {
+      patterns.push(`Lower hemisphere emphasis (${lowerPlanets.length} planets below the horizon): ${firstName}'s energy is oriented toward personal development, home, and inner work.`);
+    }
+    const eastPlanets = mainPlanets.filter(p => posMap[p] && (posMap[p].house >= 10 || posMap[p].house <= 3));
+    const westPlanets = mainPlanets.filter(p => posMap[p] && posMap[p].house >= 4 && posMap[p].house <= 9);
+    if (eastPlanets.length >= 7) {
+      patterns.push(`Eastern hemisphere emphasis (${eastPlanets.length} planets): Self-directed, independent, and personally motivated.`);
+    } else if (westPlanets.length >= 7) {
+      patterns.push(`Western hemisphere emphasis (${westPlanets.length} planets): Other-directed, collaborative, and responsive to external demands.`);
+    }
+    return patterns;
+  }
+
+  // Element/modality interpretation texts (Quality improvement #9)
+  const ELEMENT_EXCESS: Record<string, string> = {
+    Fire: "dominant Fire creates a personality driven by inspiration, action, and enthusiasm -- but may struggle with patience and listening.",
+    Earth: "dominant Earth creates reliability and practical genius -- but may resist change and emotional vulnerability.",
+    Air: "dominant Air creates a brilliant communicator and thinker -- but may intellectualize feelings rather than experiencing them.",
+    Water: "dominant Water creates deep emotional intelligence and intuition -- but may be overwhelmed by feelings and boundary issues.",
+  };
+  const ELEMENT_LACK: Record<string, string> = {
+    Fire: "a lack of Fire may mean difficulty with initiative, motivation, and self-assertion. Energy must be consciously cultivated.",
+    Earth: "a lack of Earth may mean difficulty with practical matters, finances, and follow-through. Grounding practices are essential.",
+    Air: "a lack of Air may mean difficulty with objectivity, communication, and social connection. Intellectual engagement helps.",
+    Water: "a lack of Water may mean difficulty with emotional processing and intimacy. Developing empathy is a lifelong lesson.",
+  };
+
+  // Retrograde planets (Quality improvement #10)
+  const retrogradePlanets = Object.entries(posMap)
+    .filter(([, d]) => d.retrograde)
+    .map(([name]) => name);
+
+  // LLM-powered narrative generation (Feature #11)
+  async function llmGenerate(prompt: string, context: string): Promise<string> {
+    try {
+      const sysPrompt = "You are a master astrologer writing a professional natal report. Write in third person using the querent's first name. Be specific, reference exact degrees and aspects. Write in flowing prose, not bullet points. Do not use markdown formatting.";
+      const sessionRes = await fetch(`${API_URL}/api/v1/llm/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ system_prompt: sysPrompt }),
+      });
+      if (!sessionRes.ok) return "";
+      const { session_id } = await sessionRes.json();
+      const msgRes = await fetch(`${API_URL}/api/v1/llm/sessions/${session_id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "user", content: `${prompt}\n\nChart data:\n${context}` }),
+      });
+      if (!msgRes.ok) return "";
+      const data = await msgRes.json();
+      return data.content || "";
+    } catch {
+      return "";
+    }
   }
 
   // =======================================================================
@@ -841,7 +1007,7 @@ export async function generateComprehensiveReport(
   // Big Three line
   doc.setFontSize(10);
   doc.setTextColor(...WHITE);
-  doc.text(`\u2609 ${sunSign} Sun ${sunDeg}\u00b0  \u00b7  \u263D ${moonSign} Moon ${moonDeg}\u00b0  \u00b7  ${ascSign} Rising ${ascDeg}\u00b0`, W / 2, 155, { align: "center" });
+  doc.text(`${sunSign} Sun ${sunDeg}  -  ${moonSign} Moon ${moonDeg}  -  ${ascSign} Rising ${ascDeg}`, W / 2, 155, { align: "center" });
 
   // Human Design line
   const hdData = humanDesign?.data ?? humanDesign;
@@ -952,18 +1118,18 @@ export async function generateComprehensiveReport(
   onProgress?.({ stage: "Writing planetary narratives...", percent: 75 });
 
   // --- SUN ---
-  y = planetHead(y, `\u2609 ${sunSign} Sun at ${sunDeg}\u00b0 in the ${sunHouse}${sunHouse === 1 ? "st" : sunHouse === 2 ? "nd" : sunHouse === 3 ? "rd" : "th"} House`);
-  y = poeticSub(y, sunTitle(sunSign, sunHouse));
+  y = planetHead(y, `${sunSign} Sun at ${sunDeg}\u00b0 in the ${sunHouseFixed}${sunHouseFixed === 1 ? "st" : sunHouseFixed === 2 ? "nd" : sunHouseFixed === 3 ? "rd" : "th"} House`);
+  y = poeticSub(y, sunTitle(sunSign, sunHouseFixed));
 
   // Sun narrative: sign + decan + house
   const sunInterp = PLANET_IN_SIGN.Sun?.[sunSign] || "";
-  y = body(y, `${firstName}'s Sun at ${sunDeg}\u00b0 ${sunSign} sits ${sunHouse <= 3 ? "in the angular" : sunHouse <= 6 ? "deep in the" : sunHouse <= 9 ? "in the expansive" : "at the peak of the"} ${sunHouse}${sunHouse === 1 ? "st" : sunHouse === 2 ? "nd" : sunHouse === 3 ? "rd" : "th"} House \u2014 the house of ${HOUSE_DOMAIN[sunHouse] || "life experience"}. ${sunInterp}`);
+  y = body(y, `${firstName}'s Sun at ${sunDeg}\u00b0 ${sunSign} sits ${sunHouseFixed <= 3 ? "in the angular" : sunHouseFixed <= 6 ? "deep in the" : sunHouseFixed <= 9 ? "in the expansive" : "at the peak of the"} ${sunHouseFixed}${sunHouseFixed === 1 ? "st" : sunHouseFixed === 2 ? "nd" : sunHouseFixed === 3 ? "rd" : "th"} House \u2014 the house of ${HOUSE_DOMAIN[sunHouseFixed] || "life experience"}. ${sunInterp}`);
 
   const decan = getDecan(sunDeg);
   const decanRuler = DECAN_RULER[sunSign]?.[decan - 1] || SIGN_RULER[sunSign];
   y = body(y, `${sunDeg}\u00b0 ${sunSign} falls in the ${decan === 1 ? "first" : decan === 2 ? "second" : "third"} decan, governed by ${decanRuler}${decanRuler !== SIGN_RULER[sunSign] ? ` through sub-rulership, adding a distinctive layer of ${SIGN_ELEMENT[Object.entries(SIGN_RULER).find(([, r]) => r === decanRuler)?.[0] || sunSign] || ""} influence` : ", reinforcing the pure expression of this sign's energy"}. This decanate colors the ${sunSign} core with ${decanRuler === "Venus" ? "aesthetic sensibility and material groundedness" : decanRuler === "Mercury" ? "intellectual sharpness and communicative flair" : decanRuler === "Mars" ? "dynamic energy and competitive drive" : decanRuler === "Jupiter" ? "philosophical breadth and optimism" : decanRuler === "Saturn" ? "structural discipline and long-term vision" : decanRuler === "Sun" ? "pure creative vitality and self-expression" : decanRuler === "Moon" ? "emotional depth and intuitive wisdom" : "innovative and unconventional energy"}.`);
 
-  const sunHouseInterp = PLANET_IN_HOUSE.Sun?.[sunHouse] || "";
+  const sunHouseInterp = PLANET_IN_HOUSE.Sun?.[sunHouseFixed] || "";
   if (sunHouseInterp) y = body(y, sunHouseInterp);
 
   // Sun aspects
@@ -982,13 +1148,13 @@ export async function generateComprehensiveReport(
   y = divider(y);
 
   // --- MOON ---
-  y = planetHead(y, `\u263D ${moonSign} Moon at ${moonDeg}\u00b0 in the ${moonHouse}${moonHouse === 1 ? "st" : moonHouse === 2 ? "nd" : moonHouse === 3 ? "rd" : "th"} House`);
+  y = planetHead(y, `${moonSign} Moon at ${moonDeg}\u00b0 in the ${moonHouseFixed}${moonHouseFixed === 1 ? "st" : moonHouseFixed === 2 ? "nd" : moonHouseFixed === 3 ? "rd" : "th"} House`);
   y = poeticSub(y, moonTitle(moonSign));
 
   const moonInterp = PLANET_IN_SIGN.Moon?.[moonSign] || "";
-  y = body(y, `The Moon in ${moonSign} in the ${moonHouse}${moonHouse === 1 ? "st" : moonHouse === 2 ? "nd" : moonHouse === 3 ? "rd" : "th"} House of ${HOUSE_DOMAIN[moonHouse] || "experience"} creates a deep emotional need for ${SIGN_ELEMENT[moonSign] === "Fire" ? "excitement, freedom, and self-expression" : SIGN_ELEMENT[moonSign] === "Earth" ? "stability, comfort, and tangible security" : SIGN_ELEMENT[moonSign] === "Air" ? "intellectual stimulation and social connection" : "emotional depth, intimacy, and creative expression"}. ${firstName} feels most alive when ${moonHouse <= 3 ? "engaging directly with the immediate environment" : moonHouse <= 6 ? "creating, serving, or perfecting a craft" : moonHouse <= 9 ? "connecting deeply with others or exploring the unknown" : "contributing to the larger world"}. ${moonInterp}`);
+  y = body(y, `The Moon in ${moonSign} in the ${moonHouseFixed}${moonHouseFixed === 1 ? "st" : moonHouseFixed === 2 ? "nd" : moonHouseFixed === 3 ? "rd" : "th"} House of ${HOUSE_DOMAIN[moonHouseFixed] || "experience"} creates a deep emotional need for ${SIGN_ELEMENT[moonSign] === "Fire" ? "excitement, freedom, and self-expression" : SIGN_ELEMENT[moonSign] === "Earth" ? "stability, comfort, and tangible security" : SIGN_ELEMENT[moonSign] === "Air" ? "intellectual stimulation and social connection" : "emotional depth, intimacy, and creative expression"}. ${firstName} feels most alive when ${moonHouseFixed <= 3 ? "engaging directly with the immediate environment" : moonHouseFixed <= 6 ? "creating, serving, or perfecting a craft" : moonHouseFixed <= 9 ? "connecting deeply with others or exploring the unknown" : "contributing to the larger world"}. ${moonInterp}`);
 
-  const moonHouseInterp = PLANET_IN_HOUSE.Moon?.[moonHouse] || "";
+  const moonHouseInterp = PLANET_IN_HOUSE.Moon?.[moonHouseFixed] || "";
   if (moonHouseInterp) y = body(y, moonHouseInterp);
 
   // Tightest Moon aspect as callout box
@@ -1000,7 +1166,7 @@ export async function generateComprehensiveReport(
     const type = (a.aspect || a.type || "").toLowerCase();
     const orb = orbVal.toFixed(1);
     const tight = orbVal < 1;
-    const title = `\u2605 ${aspectName(a)} \u2014 ${tight ? "Near-Exact" : "Significant"} Aspect`;
+    const title = `* ${aspectName(a)} \u2014 ${tight ? "Near-Exact" : "Significant"} Aspect`;
     const interp = `${firstName}'s Moon ${type}s ${other} at ${orb}\u00b0${tight ? " \u2014 essentially exact" : ""}. ${type === "trine" ? `This creates a natural harmony between the emotional world and ${other}'s domain. The connection is effortless and deeply personal.` : type === "square" ? `This creates a dynamic tension between emotional needs and ${other}'s energy. The friction is productive \u2014 it prevents emotional complacency.` : type === "opposition" ? `This creates a polarity between the inner emotional world and ${other}'s influence. Integration of these opposing forces is a lifelong creative project.` : type === "conjunction" ? `The emotional nature is completely fused with ${other}'s energy. The two cannot be separated \u2014 they operate as one.` : `This aspect provides a subtle but meaningful connection between emotional needs and ${other}'s energy.`}`;
     y = calloutBox(y, title, interp);
   }
@@ -1017,18 +1183,20 @@ export async function generateComprehensiveReport(
   const ascDecanRuler = DECAN_RULER[ascSign]?.[ascDecan - 1] || SIGN_RULER[ascSign];
   y = body(y, `At ${ascDeg}\u00b0 ${ascSign}, the Ascendant falls in the ${ascDecan === 1 ? "first" : ascDecan === 2 ? "second" : "third"} decan, sub-ruled by ${ascDecanRuler}, reinforcing ${ascDecanRuler === "Uranus" ? "the technology-forward, innovative signature" : ascDecanRuler === "Mercury" ? "the intellectual and communicative qualities" : ascDecanRuler === "Venus" ? "the aesthetic and relational dimension" : `the ${ascDecanRuler} qualities`} that color this chart.`);
 
-  // ASC aspects
-  const ascAspects = aspects.filter((a: any) => {
+  // ASC aspects — use computed aspects from chart data
+  const ascAspectsFinal = ascAspectsComputed.length > 0 ? ascAspectsComputed : aspects.filter((a: any) => {
     const p1 = a.planet1 || a.p1 || "";
     const p2 = a.planet2 || a.p2 || "";
     return (p1 === "Ascendant" || p1 === "ASC" || p2 === "Ascendant" || p2 === "ASC") && Number(a.orb ?? 99) < 6;
-  }).sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99)).slice(0, 3);
+  }).sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99));
 
-  for (const a of ascAspects) {
+  for (const a of ascAspectsFinal.slice(0, 4)) {
     const other = (a.planet1 === "Ascendant" || a.planet1 === "ASC" || a.p1 === "Ascendant" || a.p1 === "ASC") ? (a.planet2 || a.p2) : (a.planet1 || a.p1);
     const type = (a.aspect || a.type || "").toLowerCase();
-    const orb = Number(a.orb ?? 0).toFixed(1);
-    y = sectionHead(y, `ASC ${type.charAt(0).toUpperCase() + type.slice(1)} ${other} (${orb}\u00b0 orb)`);
+    const orbVal = Number(a.orb ?? 0);
+    const orb = orbVal.toFixed(1);
+    const label = aspectLabel(orbVal);
+    y = sectionHead(y, `ASC ${type.charAt(0).toUpperCase() + type.slice(1)} ${other} (${orb}\u00b0) \u2014 ${label}`);
     y = body(y, `The Ascendant's ${type} to ${other} means ${firstName}'s outward presentation is directly ${type === "trine" || type === "sextile" ? "enhanced" : "shaped"} by ${other}'s energy. People immediately perceive ${other === "Mercury" ? "intelligence, communication, and analytical ability" : other === "Uranus" ? "innovation, unconventionality, and technological savvy" : other === "Venus" ? "charm, beauty, and aesthetic sensitivity" : other === "Mars" ? "energy, directiveness, and physical presence" : other === "Jupiter" ? "optimism, wisdom, and generous nature" : other === "Saturn" ? "maturity, discipline, and quiet authority" : other === "Neptune" ? "creativity, dreaminess, and spiritual sensitivity" : other === "Pluto" ? "intensity, depth, and transformative power" : other === "Chiron" ? "vulnerability and healing capacity" : other === "Sun" ? "vitality and identity" : other === "Moon" ? "emotional sensitivity and care" : `${other}'s qualities`} in ${firstName}.`);
   }
 
@@ -1055,7 +1223,7 @@ export async function generateComprehensiveReport(
       const orb = Number(a.orb ?? 0).toFixed(2);
       const tight = Number(a.orb) < 1;
       y = calloutBox(y,
-        `\u2605 ${GLYPH[planet] || planet} ${ASPECT_GLYPH[type] || type} ${GLYPH[other] || other} (${orb}\u00b0)${tight ? " \u2014 " + (Number(a.orb) < 0.5 ? "Essentially EXACT" : "Near-Exact") : ""}`,
+        `* ${GLYPH[planet] || planet} ${ASPECT_GLYPH[type] || type} ${GLYPH[other] || other} (${orb}\u00b0)${tight ? " \u2014 " + (Number(a.orb) < 0.5 ? "Essentially EXACT" : "Near-Exact") : ""}`,
         `${planet} ${type}s ${other}${tight ? " at near-exact precision" : ""}. ${type === "trine" ? `A natural gift \u2014 ${planet}'s energy flows effortlessly into ${other}'s domain.` : type === "square" ? `Productive friction \u2014 ${planet} and ${other} push each other toward growth.` : type === "opposition" ? `A polarity requiring integration \u2014 ${planet} and ${other} must learn to work as complements.` : type === "conjunction" ? `Complete fusion \u2014 ${planet} and ${other} are inseparable in ${firstName}'s experience.` : `A meaningful connection between ${planet} and ${other}.`} ${tight ? `This is one of the defining aspects of ${firstName}'s chart.` : ""}`
       );
     }
@@ -1100,7 +1268,7 @@ export async function generateComprehensiveReport(
       info.sign,
       `${info.degree.toFixed(1)}\u00b0${retro}`,
       info.house ? `${info.house}` : "-",
-      info.sign === SIGN_RULER[info.sign] ? "Domicile" : "",
+      getPlanetSignificance(p, info.sign, info.house || 1),
     ];
   }).filter(r => r[1] !== "-");
   y = styledTable(y, ["Planet", "Sign", "Degree", "House", "Significance"], placementRows);
@@ -1109,22 +1277,30 @@ export async function generateComprehensiveReport(
 
   // --- MAJOR ASPECTS — The Neural Network ---
   y = sectionHead(y, "Major Aspects \u2014 The Neural Network");
-  y = body(y, `The aspects between planets form the neural network of the chart \u2014 the wiring that determines how energies communicate. ${firstName}'s chart features ${aspects.filter((a: any) => Number(a.orb ?? 99) < 3).length} tight aspects that define the core nature.`);
+  const exactCount = aspects.filter((a: any) => Number(a.orb ?? 99) <= 1).length;
+  y = body(y, `The aspects between planets form the neural network of the chart \u2014 the wiring that determines how energies communicate. ${firstName}'s chart features ${exactCount} exact or near-exact aspects that define the core nature.`);
 
-  const tightAspects = aspects
-    .filter((a: any) => Number(a.orb ?? 99) < 7)
+  // Include ASC aspects alongside planetary aspects
+  const allAspects = [...aspects, ...ascAspectsComputed]
+    .filter((a: any) => Number(a.orb ?? 99) <= 5)
     .sort((a: any, b: any) => Number(a.orb ?? 99) - Number(b.orb ?? 99))
-    .slice(0, 8);
+    .slice(0, 12);
 
-  for (const a of tightAspects) {
+  for (const a of allAspects) {
     const type = (a.aspect || a.type || "").toLowerCase();
     const p1 = a.planet1 || a.p1 || "";
     const p2 = a.planet2 || a.p2 || "";
-    const orb = Number(a.orb ?? 0).toFixed(2);
-    const isExact = Number(a.orb) < 0.5;
-    const title = `${GLYPH[p1] || p1} ${ASPECT_GLYPH[type] || type} ${GLYPH[p2] || p2} (${orb}\u00b0)`;
-    const meaning = `${p1} ${type}s ${p2}. ${isExact ? "This is essentially exact \u2014 one of the most powerful configurations in the entire chart. " : ""}${type === "trine" ? `Natural talent flows between ${p1} and ${p2}.` : type === "square" ? `Productive tension between ${p1} and ${p2} drives growth and development.` : type === "opposition" ? `A polarity axis between ${p1} and ${p2} requires conscious integration.` : type === "conjunction" ? `${p1} and ${p2} are fused into a single force.` : `${p1} and ${p2} are linked through ${type} aspect.`}`;
-    y = calloutBox(y, title, meaning);
+    const orbVal = Number(a.orb ?? 0);
+    const orb = orbVal.toFixed(2);
+    const label = aspectLabel(orbVal);
+    const title = `${GLYPH[p1] || p1} ${ASPECT_GLYPH[type] || type} ${GLYPH[p2] || p2} (${orb}\u00b0) \u2014 ${label}`;
+    const meaning = `${p1} ${type}s ${p2}. ${orbVal <= 0.5 ? "This is essentially exact \u2014 one of the most powerful configurations in the entire chart. " : orbVal <= 1.0 ? "Near-exact precision makes this a defining aspect. " : ""}${type === "trine" ? `Natural talent flows between ${p1} and ${p2}.` : type === "square" ? `Productive tension between ${p1} and ${p2} drives growth and development.` : type === "opposition" ? `A polarity axis between ${p1} and ${p2} requires conscious integration.` : type === "conjunction" ? `${p1} and ${p2} are fused into a single force.` : `${p1} and ${p2} are linked through ${type} aspect.`}`;
+    if (orbVal <= 1.0) {
+      y = calloutBox(y, `* ${title}`, meaning);
+    } else {
+      y = sectionHead(y, title);
+      y = body(y, meaning);
+    }
   }
 
   // --- DIGNITIES ---
@@ -1144,6 +1320,46 @@ export async function generateComprehensiveReport(
     else if (domiciles[p]?.includes(info.sign)) dignity = "Domicile";
     if (dignity) {
       y = bullet(y, `${p} in ${info.sign} (${dignity}) \u2014 ${dignity === "Exalted" ? `${p} reaches its peak expression in ${info.sign}. This is ${p}'s highest power \u2014 operating at maximum effectiveness.` : `${p} in its own sign operates with full natural authority. Comfortable, powerful, and unconstrained.`}`);
+    }
+  }
+
+  // --- CHART PATTERNS ---
+  const chartPatterns = detectPatterns();
+  if (chartPatterns.length > 0) {
+    y = divider(y);
+    y = sectionHead(y, "Chart Patterns");
+    for (const pat of chartPatterns) {
+      y = calloutBox(y, "* Pattern Detected", pat);
+    }
+  }
+
+  // --- ELEMENT & MODALITY INTERPRETATION ---
+  y = divider(y);
+  y = sectionHead(y, "Element & Modality Balance");
+  for (const elem of ["Fire", "Earth", "Air", "Water"] as const) {
+    const cnt = elemCount[elem];
+    y = bullet(y, `${elem}: ${cnt} planet${cnt !== 1 ? "s" : ""}`);
+  }
+  const highElem = Object.entries(elemCount).sort((a, b) => b[1] - a[1])[0];
+  const lowElem = Object.entries(elemCount).sort((a, b) => a[1] - b[1])[0];
+  if (highElem && highElem[1] >= 3) {
+    y = body(y, `With ${highElem[1]} planets in ${highElem[0]}, ${ELEMENT_EXCESS[highElem[0]] || ""}`);
+  }
+  if (lowElem && lowElem[1] === 0) {
+    y = body(y, `${ELEMENT_LACK[lowElem[0]] || ""}`);
+  }
+
+  // --- RETROGRADE ANALYSIS ---
+  if (retrogradePlanets.length > 0) {
+    y = divider(y);
+    y = sectionHead(y, "Retrograde Analysis");
+    const personalRetros = retrogradePlanets.filter(p => ["Mercury", "Venus", "Mars"].includes(p));
+    const outerRetros = retrogradePlanets.filter(p => ["Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"].includes(p));
+    y = body(y, `${firstName}'s chart contains ${retrogradePlanets.length} retrograde planet${retrogradePlanets.length !== 1 ? "s" : ""}: ${retrogradePlanets.join(", ")}. ${personalRetros.length > 0 ? `The personal planet retrograde${personalRetros.length > 1 ? "s" : ""} (${personalRetros.join(", ")}) turn${personalRetros.length === 1 ? "s" : ""} that planet's energy inward, creating a more reflective and internalized expression. ` : ""}${outerRetros.length > 0 ? `The outer planet retrograde${outerRetros.length > 1 ? "s" : ""} (${outerRetros.join(", ")}) are generational, affecting the entire birth cohort and turning transformative energies inward for deeper processing.` : ""}`);
+    for (const rp of personalRetros) {
+      const info = posMap[rp];
+      if (!info) continue;
+      y = bullet(y, `${rp} retrograde in ${info.sign}: ${rp === "Mercury" ? "Communication and thought processes are more internal; ideas are refined before being shared. Past lessons in communication resurface for mastery." : rp === "Venus" ? "Love and values are deeply internalized. Relationships require authentic connection rather than surface attraction. May revisit past relationships." : "Drive and assertion are channeled inward. Actions are more deliberate and strategic. Physical energy may be cyclic."}`);
     }
   }
 
@@ -1277,16 +1493,26 @@ export async function generateComprehensiveReport(
       const dgRows: string[][] = [];
       for (const [planet, info] of Object.entries(dgTable)) {
         const pd = info as any;
+        // Handle nested structure: dignity_table.Sun.essential.dignities
+        const ess = pd.essential || pd;
+        const digs = ess.dignities || ess;
+        const domicile = digs.domicile || pd.domicile || pd.rulership;
+        const exalt = digs.exaltation || pd.exaltation;
+        const detri = digs.detriment || pd.detriment;
+        const fall = digs.fall || pd.fall;
+        const score = pd.score ?? pd.total_score ?? ess.score ?? ess.total_score ?? digs.score;
         dgRows.push([
           planet,
-          pd.domicile ? "Yes" : "-",
-          pd.exaltation ? "Yes" : "-",
-          pd.detriment ? "Yes" : "-",
-          pd.fall ? "Yes" : "-",
-          pd.score != null ? String(pd.score) : pd.total_score != null ? String(pd.total_score) : "-",
+          domicile ? "Yes" : "-",
+          exalt ? "Yes" : "-",
+          detri ? "Yes" : "-",
+          fall ? "Yes" : "-",
+          score != null ? String(score) : "-",
         ]);
       }
-      y = styledTable(y, ["Planet", "Domicile", "Exaltation", "Detriment", "Fall", "Score"], dgRows);
+      if (dgRows.length > 0) {
+        y = styledTable(y, ["Planet", "Domicile", "Exaltation", "Detriment", "Fall", "Score"], dgRows);
+      }
     }
   }
 
@@ -1386,7 +1612,7 @@ export async function generateComprehensiveReport(
         return pair.includes("Sun") && pair.includes("Moon");
       });
       if (sunMoonMp) {
-        y = calloutBox(y, "\u2605 Sun/Moon Midpoint", `The Sun/Moon midpoint \u2014 the core integration point of conscious identity and emotional nature \u2014 falls at ${sunMoonMp.degree != null ? `${Number(sunMoonMp.degree).toFixed(1)}\u00b0` : ""} ${sunMoonMp.sign || ""}. ${sunMoonMp.interpretation || `This is the most personal point in the chart. Any planet or transit contacting this degree activates the deepest integration of who ${firstName} is.`}`);
+        y = calloutBox(y, "* Sun/Moon Midpoint", `The Sun/Moon midpoint \u2014 the core integration point of conscious identity and emotional nature \u2014 falls at ${sunMoonMp.degree != null ? `${Number(sunMoonMp.degree).toFixed(1)}\u00b0` : ""} ${sunMoonMp.sign || ""}. ${sunMoonMp.interpretation || `This is the most personal point in the chart. Any planet or transit contacting this degree activates the deepest integration of who ${firstName} is.`}`);
       }
     }
   }
@@ -1526,8 +1752,23 @@ export async function generateComprehensiveReport(
     const currentDasha = vdData.current_dasha || vdData.current;
     if (currentDasha) {
       const cdPlanet = currentDasha.planet || currentDasha.lord || currentDasha.maha || "";
-      y = calloutBox(y, `\u2605 Current Dasha: ${cdPlanet}`, `${firstName} is currently running the ${cdPlanet} period${currentDasha.antardasha ? ` / ${currentDasha.antardasha} sub-period` : ""}. ${cdPlanet === "Saturn" ? "This is a period of discipline, responsibility, and karmic reckoning. Hard work pays off, but shortcuts are punished." : cdPlanet === "Jupiter" ? "This is a period of expansion, wisdom, and good fortune. Growth comes through teaching, learning, and philosophical exploration." : cdPlanet === "Mars" ? "This is a period of energy, initiative, and action. Courage and decisiveness are required." : cdPlanet === "Venus" ? "This is a period of beauty, relationships, and material comfort. Art, love, and luxury feature prominently." : cdPlanet === "Mercury" ? "This is a period of communication, intellect, and commerce. Business, study, and connection thrive." : cdPlanet === "Moon" ? "This is a period of emotional depth, nurturing, and inner development. Home and family become central." : cdPlanet === "Sun" ? "This is a period of identity, authority, and personal power. Leadership and self-expression take center stage." : cdPlanet === "Rahu" ? "This is a period of worldly ambition, unconventional pursuits, and karmic acceleration. Desires are amplified." : cdPlanet === "Ketu" ? "This is a period of spiritual deepening, letting go, and moksha. Material detachment accelerates inner growth." : `This period activates the natal promise of ${cdPlanet} across all areas of life.`}`);
+      y = calloutBox(y, `* Current Dasha: ${cdPlanet}`, `${firstName} is currently running the ${cdPlanet} period${currentDasha.antardasha ? ` / ${currentDasha.antardasha} sub-period` : ""}. ${cdPlanet === "Saturn" ? "This is a period of discipline, responsibility, and karmic reckoning. Hard work pays off, but shortcuts are punished." : cdPlanet === "Jupiter" ? "This is a period of expansion, wisdom, and good fortune. Growth comes through teaching, learning, and philosophical exploration." : cdPlanet === "Mars" ? "This is a period of energy, initiative, and action. Courage and decisiveness are required." : cdPlanet === "Venus" ? "This is a period of beauty, relationships, and material comfort. Art, love, and luxury feature prominently." : cdPlanet === "Mercury" ? "This is a period of communication, intellect, and commerce. Business, study, and connection thrive." : cdPlanet === "Moon" ? "This is a period of emotional depth, nurturing, and inner development. Home and family become central." : cdPlanet === "Sun" ? "This is a period of identity, authority, and personal power. Leadership and self-expression take center stage." : cdPlanet === "Rahu" ? "This is a period of worldly ambition, unconventional pursuits, and karmic acceleration. Desires are amplified." : cdPlanet === "Ketu" ? "This is a period of spiritual deepening, letting go, and moksha. Material detachment accelerates inner growth." : `This period activates the natal promise of ${cdPlanet} across all areas of life.`}`);
     }
+  }
+
+  // LLM-enhanced Vedic synthesis
+  const vDataLlm = vedic?.data ?? vedic;
+  const vSunSignLlm = (vDataLlm?.positions?.Sun || vDataLlm?.positions?.sun)?.sign || "";
+  const vNakshatra = (vDataLlm?.positions?.Moon || vDataLlm?.positions?.moon)?.nakshatra || "";
+  const vPada = (vDataLlm?.positions?.Moon || vDataLlm?.positions?.moon)?.pada || "";
+  const currentDashaLlm = (vimshottari?.data ?? vimshottari)?.current_dasha || (vimshottari?.data ?? vimshottari)?.current;
+  const llmVedicCtx = `Tropical Sun: ${sunSign} H${sunHouseFixed}, Sidereal Sun: ${vSunSignLlm || "unknown"}, Nakshatra: ${vNakshatra || "unknown"}, Pada: ${vPada || "?"}, Current dasha: ${currentDashaLlm?.planet || currentDashaLlm?.lord || "unknown"}`;
+  const llmVedic = await llmGenerate(`Write a 400-word Vedic astrology synthesis for ${firstName}. Cover the tropical-to-sidereal shift, nakshatra significance, and current Vimshottari dasha period implications.`, llmVedicCtx);
+  if (llmVedic) {
+    y = divider(y);
+    y = sectionHead(y, "Vedic Synthesis");
+    const vedicLines = doc.splitTextToSize(llmVedic, CW);
+    for (const line of vedicLines) { y = body(y, line); }
   }
 
   // =======================================================================
@@ -2102,6 +2343,17 @@ export async function generateComprehensiveReport(
     y = body(y, `Physical: ${phys}% \u2014 ${phys > 60 ? "high energy, good time for physical challenges" : phys > 30 ? "moderate energy, maintain regular activity" : "low energy, prioritize rest and recovery"}. Emotional: ${emot}% \u2014 ${emot > 60 ? "emotionally resilient and expressive" : emot > 30 ? "balanced emotional state" : "practice extra self-care"}. Intellectual: ${intel}% \u2014 ${intel > 60 ? "mind is sharp, ideal for complex work" : intel > 30 ? "mental energy is stable" : "break tasks into smaller steps"}.`);
   }
 
+  // LLM-enhanced health narrative
+  onProgress?.({ stage: "Generating AI health narrative...", percent: 88 });
+  const llmHealthCtx = `ASC: ${ascSign}, 6th house: ${h6Sign}, Sun: ${sunSign} H${sunHouseFixed}, Moon: ${moonSign} H${moonHouseFixed}, Mars: ${posMap["Mars"]?.sign || "?"} H${posMap["Mars"]?.house || "?"}, Saturn: ${posMap["Saturn"]?.sign || "?"} H${posMap["Saturn"]?.house || "?"}, elements: Fire=${elemCount.Fire} Earth=${elemCount.Earth} Air=${elemCount.Air} Water=${elemCount.Water}`;
+  const llmHealth = await llmGenerate(`Write a 400-word medical astrology health reading for ${firstName}. Cover constitution (${ascSign} Rising), daily health (6th house in ${h6Sign}), planetary health indicators, and element balance health implications. This is symbolic self-awareness, not medical advice.`, llmHealthCtx);
+  if (llmHealth) {
+    y = divider(y);
+    y = sectionHead(y, "Integrated Health Narrative");
+    const healthLines = doc.splitTextToSize(llmHealth, CW);
+    for (const line of healthLines) { y = body(y, line); }
+  }
+
   y = mutedItalic(y, "This health reading uses astrological symbolism for self-reflection. It is not medical advice. Always consult healthcare professionals for health concerns.");
 
   // =======================================================================
@@ -2309,7 +2561,7 @@ export async function generateComprehensiveReport(
     // Mercury retrograde special note
     const mercRet = Array.isArray(retrogrades) ? retrogrades.find((r: any) => (r.planet || "").includes("Mercury") && (r.is_retrograde || r.status === "Retrograde")) : null;
     if (mercRet) {
-      y = calloutBox(y, "\u2605 Mercury Retrograde Active", `Mercury is currently retrograde in ${mercRet.sign || "the sky"}. Communication delays, technology glitches, and misunderstandings are more likely. This is an excellent time for ${firstName} to review, revise, and reconnect with old contacts \u2014 but avoid signing important contracts or launching new projects if possible.`);
+      y = calloutBox(y, "* Mercury Retrograde Active", `Mercury is currently retrograde in ${mercRet.sign || "the sky"}. Communication delays, technology glitches, and misunderstandings are more likely. This is an excellent time for ${firstName} to review, revise, and reconnect with old contacts \u2014 but avoid signing important contracts or launching new projects if possible.`);
     }
   }
 
@@ -2390,6 +2642,16 @@ export async function generateComprehensiveReport(
     }
   }
 
+  // LLM-enhanced relationship narrative
+  const llmRelCtx = `Venus: ${posMap["Venus"]?.sign || "?"} H${posMap["Venus"]?.house || "?"}, Mars: ${posMap["Mars"]?.sign || "?"} H${posMap["Mars"]?.house || "?"}, 7th house: ${h7Sign}, Venus-Mars aspects: ${venMarsAspects.map((a: any) => `${(a.aspect || a.type || "")} ${Number(a.orb ?? 0).toFixed(1)}`).join(", ") || "none"}`;
+  const llmRel = await llmGenerate(`Write a 300-word relationship reading for ${firstName}. Cover love language, desire nature, partnership needs, and relationship dynamics based on the chart data.`, llmRelCtx);
+  if (llmRel) {
+    y = divider(y);
+    y = sectionHead(y, "Relationship Synthesis");
+    const relLines = doc.splitTextToSize(llmRel, CW);
+    for (const line of relLines) { y = body(y, line); }
+  }
+
   // =======================================================================
   // CHAPTER XVIII: CAREER & VOCATION
   // =======================================================================
@@ -2441,6 +2703,16 @@ export async function generateComprehensiveReport(
   if (h2Sign) {
     y = sectionHead(y, `2nd House in ${h2Sign} \u2014 Income Patterns`);
     y = body(y, `The 2nd house governs earned income, material resources, and self-worth. With ${h2Sign} on the cusp, ${firstName}'s relationship to money and resources is colored by ${SIGN_ELEMENT[h2Sign]} energy \u2014 ${SIGN_ELEMENT[h2Sign] === "Fire" ? "income through initiative, leadership, and personal brand" : SIGN_ELEMENT[h2Sign] === "Earth" ? "income through steady building, practical skills, and material expertise" : SIGN_ELEMENT[h2Sign] === "Air" ? "income through ideas, communication, technology, and networking" : "income through creative work, emotional intelligence, and healing/helping professions"}.`);
+  }
+
+  // LLM-enhanced career narrative
+  const llmCareerCtx = `MC: ${mcSign}, Saturn: ${posMap["Saturn"]?.sign || "?"} H${posMap["Saturn"]?.house || "?"}, Jupiter: ${posMap["Jupiter"]?.sign || "?"} H${posMap["Jupiter"]?.house || "?"}, 6th house: ${h6Sign}, 2nd house: ${h2Sign}, North Node: ${northNode?.data?.sign || northNode?.sign || "?"}`;
+  const llmCareer = await llmGenerate(`Write a 300-word career and vocation reading for ${firstName}. Cover MC sign, career direction, Saturn discipline, Jupiter opportunity, daily work style, and income patterns.`, llmCareerCtx);
+  if (llmCareer) {
+    y = divider(y);
+    y = sectionHead(y, "Career Synthesis");
+    const careerLines = doc.splitTextToSize(llmCareer, CW);
+    for (const line of careerLines) { y = body(y, line); }
   }
 
   // =======================================================================
@@ -2513,6 +2785,18 @@ export async function generateComprehensiveReport(
     y = body(y, `Neptune in ${neptuneInfo.sign} in the ${neptuneInfo.house}${neptuneInfo.house === 1 ? "st" : neptuneInfo.house === 2 ? "nd" : neptuneInfo.house === 3 ? "rd" : "th"} House connects ${firstName} to the transcendent through the domain of ${HOUSE_DOMAIN[neptuneInfo.house] || "experience"}. This is where reality becomes fluid, imagination soars, and the boundary between self and other dissolves.`);
   }
 
+  // LLM-enhanced spiritual narrative
+  const nnDataSpir = northNode?.data ?? northNode;
+  const chironDataSpir = chiron?.data ?? chiron;
+  const llmSpiritCtx = `North Node: ${nnDataSpir?.sign || "?"} H${nnDataSpir?.house || "?"}, Chiron: ${chironDataSpir?.sign || "?"} H${chironDataSpir?.house || "?"}, 12th house: ${h12Sign}, Neptune: ${neptuneInfo?.sign || "?"} H${neptuneInfo?.house || "?"}`;
+  const llmSpirit = await llmGenerate(`Write a 300-word spiritual and karmic path reading for ${firstName}. Cover North Node soul direction, Chiron wound-to-gift journey, 12th house hidden self, and Neptune mystical connection.`, llmSpiritCtx);
+  if (llmSpirit) {
+    y = divider(y);
+    y = sectionHead(y, "Spiritual Path Synthesis");
+    const spiritLines = doc.splitTextToSize(llmSpirit, CW);
+    for (const line of spiritLines) { y = body(y, line); }
+  }
+
   // =======================================================================
   // CHAPTER XX: CROSS-SYSTEM SYNTHESIS
   // =======================================================================
@@ -2526,12 +2810,12 @@ export async function generateComprehensiveReport(
 
   // Theme 1: Core Identity
   y = sectionHead(y, "1. The Core Identity Across Systems");
-  y = body(y, `Every system in ${firstName}'s reading confirms a consistent core: ${sunSign} Sun in the ${sunHouse}${sunHouse === 1 ? "st" : sunHouse === 2 ? "nd" : sunHouse === 3 ? "rd" : "th"} House provides the Western anchor. The ${SIGN_ELEMENT[sunSign]} element echoes through the Life Path ${lpSum} numerological signature. The MBTI type ${mbtiType} reinforces the cognitive style suggested by the natal Mercury in ${posMap["Mercury"]?.sign || "its sign"}, and the Enneagram ${enneagram?.data?.type || enneagram?.type ? `Type ${(enneagram.data ?? enneagram).type}` : "type"} reveals the motivational engine beneath the surface.`);
+  y = body(y, `Every system in ${firstName}'s reading confirms a consistent core: ${sunSign} Sun in the ${sunHouseFixed}${sunHouseFixed === 1 ? "st" : sunHouseFixed === 2 ? "nd" : sunHouseFixed === 3 ? "rd" : "th"} House provides the Western anchor. The ${SIGN_ELEMENT[sunSign]} element echoes through the Life Path ${lpSum} numerological signature. The MBTI type ${mbtiType} reinforces the cognitive style suggested by the natal Mercury in ${posMap["Mercury"]?.sign || "its sign"}, and the Enneagram ${enneagram?.data?.type || enneagram?.type ? `Type ${(enneagram.data ?? enneagram).type}` : "type"} reveals the motivational engine beneath the surface.`);
   y = body(y, `${hdData?.type ? `Human Design adds the ${hdData.type} type \u2014 ${hdData.type === "Generator" || hdData.type === "Manifesting Generator" ? "confirming a life designed around sustained, responsive energy" : hdData.type === "Projector" ? "indicating a life designed for guiding others through invitation" : hdData.type === "Manifestor" ? "confirming a life designed for initiation and impact" : "revealing a unique role in the community"}.` : ""} ${dayMaster ? `BaZi's ${dayMaster} Day Master provides the Chinese anchor, confirming the elemental core through an entirely independent system.` : ""}`);
 
   // Theme 2: Emotional Architecture
   y = sectionHead(y, "2. The Emotional Architecture");
-  y = body(y, `${firstName}'s ${moonSign} Moon in the ${moonHouse}${moonHouse === 1 ? "st" : moonHouse === 2 ? "nd" : moonHouse === 3 ? "rd" : "th"} House defines the emotional core. ${vedic ? `The Vedic chart${(vedic.data ?? vedic).positions?.Moon?.nakshatra ? ` places the Moon in ${(vedic.data ?? vedic).positions.Moon.nakshatra} nakshatra, adding` : " adds"} a karmic dimension to the emotional landscape.` : ""} The ${SIGN_ELEMENT[moonSign]} emotional nature ${SIGN_ELEMENT[moonSign] === SIGN_ELEMENT[sunSign] ? `harmonizes naturally with the ${SIGN_ELEMENT[sunSign]} Sun, creating internal consistency` : `contrasts productively with the ${SIGN_ELEMENT[sunSign]} Sun, creating a rich inner dialogue between different modes of being`}.`);
+  y = body(y, `${firstName}'s ${moonSign} Moon in the ${moonHouseFixed}${moonHouseFixed === 1 ? "st" : moonHouseFixed === 2 ? "nd" : moonHouseFixed === 3 ? "rd" : "th"} House defines the emotional core. ${vedic ? `The Vedic chart${(vedic.data ?? vedic).positions?.Moon?.nakshatra ? ` places the Moon in ${(vedic.data ?? vedic).positions.Moon.nakshatra} nakshatra, adding` : " adds"} a karmic dimension to the emotional landscape.` : ""} The ${SIGN_ELEMENT[moonSign]} emotional nature ${SIGN_ELEMENT[moonSign] === SIGN_ELEMENT[sunSign] ? `harmonizes naturally with the ${SIGN_ELEMENT[sunSign]} Sun, creating internal consistency` : `contrasts productively with the ${SIGN_ELEMENT[sunSign]} Sun, creating a rich inner dialogue between different modes of being`}.`);
 
   // Theme 3: Western x Vedic
   y = sectionHead(y, "3. Western \u00d7 Vedic Comparison");
@@ -2594,7 +2878,7 @@ export async function generateComprehensiveReport(
   y = body(y, `Drawing from all systems, ${firstName}'s life purpose converges around several key themes:`);
   const nnData = northNode?.data ?? northNode;
   const nnSign = nnData?.sign || nnData?.north_node_sign || "";
-  y = bullet(y, `Western: ${sunSign} Sun in House ${sunHouse} \u2014 identity expressed through ${HOUSE_DOMAIN[sunHouse] || "this life domain"}`);
+  y = bullet(y, `Western: ${sunSign} Sun in House ${sunHouseFixed} \u2014 identity expressed through ${HOUSE_DOMAIN[sunHouseFixed] || "this life domain"}`);
   if (nnSign) y = bullet(y, `Karmic: North Node in ${nnSign} \u2014 soul growth through ${NORTH_NODE_SIGN[nnSign]?.split(".")[0] || "new territory"}`);
   if (hdData?.type) y = bullet(y, `Human Design: ${hdData.type} \u2014 ${hdData.type === "Generator" ? "responding to what lights up" : hdData.type === "Manifesting Generator" ? "multi-passionate responding and informing" : hdData.type === "Projector" ? "waiting for invitations to guide" : hdData.type === "Manifestor" ? "initiating and informing" : "reflecting community health"}`);
   y = bullet(y, `Numerology: Life Path ${lpSum} \u2014 ${lpSum === 1 ? "independent creation" : lpSum === 2 ? "cooperative partnership" : lpSum === 3 ? "creative expression" : lpSum === 4 ? "building foundations" : lpSum === 5 ? "transformative freedom" : lpSum === 6 ? "harmonious service" : lpSum === 7 ? "truth-seeking" : lpSum === 8 ? "material mastery" : lpSum === 9 ? "humanitarian completion" : "spiritual illumination"}`);
@@ -2602,9 +2886,20 @@ export async function generateComprehensiveReport(
 
   // Core dynamic callout
   y = calloutBox(y,
-    "\u2605 The Core Dynamic",
+    "* The Core Dynamic",
     `${firstName}'s chart is the story of a ${SIGN_ELEMENT[sunSign]} ${sunSign} identity channeled through ${moonSign} emotional intelligence, presented to the world through ${ascSign}'s lens. The ${mbtiType} cognitive style provides the mental framework, while Life Path ${lpSum} defines the overarching journey. ${domElement ? `The ${domElement[0]}-dominant element balance (${domElement[1]} planets) creates a consistent energetic signature` : "The elemental balance shapes the overall temperament"} that every system independently confirms. ${hdData?.type ? `Human Design's ${hdData.type} type adds the strategic layer of how to navigate life most correctly.` : ""} This is a chart of ${SIGN_ELEMENT[sunSign] === "Fire" ? "passionate initiative and creative courage" : SIGN_ELEMENT[sunSign] === "Earth" ? "practical mastery and enduring value" : SIGN_ELEMENT[sunSign] === "Air" ? "intellectual brilliance and connective vision" : "emotional depth and transformative compassion"}.`,
   );
+
+  // LLM-enhanced cross-system synthesis
+  onProgress?.({ stage: "Generating AI unified portrait...", percent: 97 });
+  const llmSynthCtx = `Sun: ${sunSign} H${sunHouseFixed}, Moon: ${moonSign} H${moonHouseFixed}, ASC: ${ascSign}, MBTI: ${mbtiType}, LP: ${lpSum}, HD: ${hdData?.type || "?"}, BaZi: ${dayMaster || "?"}, Vedic Sun: ${vSunSignLlm || "?"}, Enneagram: ${(enneagram?.data ?? enneagram)?.type || "?"}, elements: Fire=${elemCount.Fire} Earth=${elemCount.Earth} Air=${elemCount.Air} Water=${elemCount.Water}`;
+  const llmSynth = await llmGenerate(`Write a 500-word unified portrait synthesizing Western, Vedic, BaZi, Human Design, and personality system findings for ${firstName}. Reference specific placements. Create a cohesive narrative showing how all systems confirm the same core identity.`, llmSynthCtx);
+  if (llmSynth) {
+    y = divider(y);
+    y = sectionHead(y, "9. Unified Portrait");
+    const synthLines = doc.splitTextToSize(llmSynth, CW);
+    for (const line of synthLines) { y = body(y, line); }
+  }
 
   // =======================================================================
   // APPENDIX: DATA TABLES
@@ -2743,7 +3038,7 @@ export async function generateComprehensiveReport(
   doc.setFontSize(14);
   doc.setFont("times", "normal");
   doc.setTextColor(...GOLD);
-  doc.text("\u2605  \u2605  \u2605", W / 2, y, { align: "center" });
+  doc.text("*  *  *", W / 2, y, { align: "center" });
 
   y += 15;
   doc.setFontSize(9);
