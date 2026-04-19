@@ -3,7 +3,7 @@ import { AnimatedZodiac } from "@/components/landing/animated-zodiac";
 import { CountUp } from "@/components/landing/count-up";
 import { MobileNav } from "@/components/landing/mobile-nav";
 
-const SWAGGER_URL = "https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs";
+const SWAGGER_URL = "https://envious-brain-api-662458014068.us-central1.run.app/docs";
 
 // ---- Feature cards data ---------------------------------------------------
 

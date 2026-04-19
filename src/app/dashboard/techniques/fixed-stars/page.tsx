@@ -12,7 +12,7 @@ import { Star } from "lucide-react";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
-  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+  "https://envious-brain-api-662458014068.us-central1.run.app";
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },

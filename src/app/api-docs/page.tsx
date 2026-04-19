@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const SWAGGER_URL =
-  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs";
+  "https://envious-brain-api-662458014068.us-central1.run.app/docs";
 
 export default function ApiDocsRedirect() {
   useEffect(() => {

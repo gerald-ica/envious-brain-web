@@ -79,7 +79,7 @@ const GETTING_STARTED_STEPS = [
     step: 2,
     title: "Make Your First Request",
     description: "Use your key in the Authorization header to authenticate requests.",
-    code: `curl -X POST https://envious-brain-api-uxgej3n6ta-uc.a.run.app/api/v1/charts/western \\
+    code: `curl -X POST https://envious-brain-api-662458014068.us-central1.run.app/api/v1/charts/western \\
   -H "Content-Type: application/json" \\
   -d '{
     "datetime": "1990-06-15T14:30:00",
@@ -115,7 +115,7 @@ export default function DeveloperIndexPage() {
         <p className="text-sm text-text-muted">
           Build with the ENVI-OUS BRAIN API -- charts, personality, oracle, and more.{" "}
           <a
-            href="https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs"
+            href="https://envious-brain-api-662458014068.us-central1.run.app/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent-blue hover:underline"

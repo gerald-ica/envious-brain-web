@@ -16,7 +16,7 @@ interface CitySearchProps {
   placeholder?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://envious-brain-api-662458014068.us-central1.run.app";
 
 export function CitySearch({ label, value, onChange, placeholder }: CitySearchProps) {
   const [query, setQuery] = useState(value);

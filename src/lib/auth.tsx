@@ -50,7 +50,7 @@ export interface AuthState {
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
-  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+  "https://envious-brain-api-662458014068.us-central1.run.app";
 
 const TOKEN_KEY = "envious_access_token";
 const REFRESH_KEY = "envious_refresh_token";

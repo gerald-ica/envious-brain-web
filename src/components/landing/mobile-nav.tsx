@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const SWAGGER_URL = "https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs";
+const SWAGGER_URL = "https://envious-brain-api-662458014068.us-central1.run.app/docs";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);

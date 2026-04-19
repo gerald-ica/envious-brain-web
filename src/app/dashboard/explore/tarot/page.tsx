@@ -14,7 +14,7 @@ import { Spinner } from "@/components/ui/loading";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
-  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+  "https://envious-brain-api-662458014068.us-central1.run.app";
 
 function TarotCard({ title, card }: { title: string; card: Record<string, unknown> }) {
   const name = card.name as string ?? card.card as string ?? "Unknown";

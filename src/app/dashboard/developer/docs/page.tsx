@@ -324,7 +324,7 @@ export default function ApiDocsPage() {
         <p className="text-sm text-text-muted">
           Explore all available ENVI-OUS BRAIN API endpoints.{" "}
           <a
-            href="https://envious-brain-api-uxgej3n6ta-uc.a.run.app/docs"
+            href="https://envious-brain-api-662458014068.us-central1.run.app/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent-blue hover:underline"

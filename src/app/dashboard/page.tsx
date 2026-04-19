@@ -21,7 +21,7 @@ import {
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
-  "https://envious-brain-api-uxgej3n6ta-uc.a.run.app";
+  "https://envious-brain-api-662458014068.us-central1.run.app";
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
