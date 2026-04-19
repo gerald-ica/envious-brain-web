@@ -1363,6 +1363,21 @@ export async function generateComprehensiveReport(
     }
   }
 
+  // LLM synthesis for Chapter I
+  onProgress?.({ stage: "AI analyzing Western chart...", percent: 75 });
+  const topAspStr = allAspects.slice(0, 5).map((a: any) => `${a.planet1 || a.p1} ${(a.aspect || a.type || "").toLowerCase()} ${a.planet2 || a.p2} (${Number(a.orb ?? 0).toFixed(1)})`).join(", ");
+  const patStr = chartPatterns.join("; ") || "none detected";
+  const llmCh1 = await llmGenerate(
+    `Write a 500-word synthesis of ${firstName}'s Western natal chart. Sun: ${sunSign} at ${sunDeg} in H${sunHouseFixed}. Moon: ${moonSign} at ${moonDeg} in H${moonHouseFixed}. ASC: ${ascSign} at ${ascDeg}. Tightest aspects: ${topAspStr}. Chart patterns: ${patStr}. Retrogrades: ${retrogradePlanets.join(", ") || "none"}. Weave placements into a unified identity portrait showing how Sun, Moon, and Ascendant work together. Reference specific degrees and house meanings.`,
+    JSON.stringify({ sun: `${sunSign} ${sunDeg} H${sunHouseFixed}`, moon: `${moonSign} ${moonDeg} H${moonHouseFixed}`, asc: `${ascSign} ${ascDeg}`, aspects: topAspStr, patterns: patStr, retrogrades: retrogradePlanets, elements: elemCount })
+  );
+  if (llmCh1) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch1Lines = doc.splitTextToSize(llmCh1, CW);
+    for (const ln of ch1Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER II: HELLENISTIC & CLASSICAL TECHNIQUES
   // =======================================================================
@@ -1514,6 +1529,22 @@ export async function generateComprehensiveReport(
         y = styledTable(y, ["Planet", "Domicile", "Exaltation", "Detriment", "Fall", "Score"], dgRows);
       }
     }
+  }
+
+  // LLM synthesis for Chapter II
+  onProgress?.({ stage: "AI analyzing Hellenistic techniques...", percent: 77 });
+  const sectStr = sect ? `${(sect.data ?? sect).sect || ((sect.data ?? sect).is_day_chart ? "Day" : "Night")} chart` : "unknown";
+  const profStr = profection ? `Age ${(profection.data ?? profection).age || "?"}, sign ${(profection.data ?? profection).profected_sign || "?"}, lord ${(profection.data ?? profection).lord_of_year || "?"}` : "unavailable";
+  const almStr = almuten ? `${(almuten.data ?? almuten).almuten || (almuten.data ?? almuten).chart_ruler || "?"}` : "unknown";
+  const llmCh2 = await llmGenerate(
+    `Write a 300-word analysis of ${firstName}'s Hellenistic chart features. Sect: ${sectStr}. Annual profection: ${profStr}. Almuten: ${almStr}. Synthesize what these ancient techniques reveal about the life direction this year. Reference specific placements.`,
+    JSON.stringify({ sect: sectStr, profection: profStr, almuten: almStr })
+  );
+  if (llmCh2) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch2Lines = doc.splitTextToSize(llmCh2, CW);
+    for (const ln of ch2Lines) { y = body(y, ln); }
   }
 
   // =======================================================================
@@ -1684,6 +1715,20 @@ export async function generateComprehensiveReport(
     }
   }
 
+  // LLM synthesis for Chapter III
+  onProgress?.({ stage: "AI analyzing advanced systems...", percent: 79 });
+  const drSunStr = draconic ? `${((draconic.data ?? draconic).positions?.Sun || (draconic.data ?? draconic).positions?.sun)?.sign || "?"}` : "unavailable";
+  const llmCh3 = await llmGenerate(
+    `Write a 300-word analysis of ${firstName}'s advanced chart features. Draconic Sun: ${drSunStr} (tropical Sun: ${sunSign}). Comment on what these advanced layers -- draconic chart, harmonics, midpoints, fixed star conjunctions, declinations -- add to the basic natal picture. How does the soul's blueprint (draconic) compare to the personality (tropical)?`,
+    JSON.stringify({ draconic_sun: drSunStr, tropical_sun: sunSign, has_harmonics: !!harmonics, has_midpoints: !!midpoints, has_fixedStars: !!fixedStars, has_declinations: !!declinations })
+  );
+  if (llmCh3) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch3Lines = doc.splitTextToSize(llmCh3, CW);
+    for (const ln of ch3Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER IV: VEDIC ASTROLOGY
   // =======================================================================
@@ -1838,6 +1883,19 @@ export async function generateComprehensiveReport(
     y = body(y, `Zi Wei Dou Shu data was not available. This \"Purple Star Astrology\" system from China organizes life into twelve palaces, each governed by specific stellar influences, offering a complementary perspective to Western and Vedic approaches.`);
   }
 
+  // LLM synthesis for Chapter V
+  onProgress?.({ stage: "AI analyzing KP & Eastern methods...", percent: 80 });
+  const llmCh5 = await llmGenerate(
+    `Write a 200-word analysis connecting ${firstName}'s KP system sub-lord findings with their Vedic chart. How does the KP perspective add precision to the Vedic picture? If data is limited, discuss the theoretical value of sub-lord analysis for this chart.`,
+    JSON.stringify({ has_kp: !!kpSystem, has_ziwei: !!ziwei, vedic_sun: vSunSignLlm, nakshatra: vNakshatra })
+  );
+  if (llmCh5) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch5Lines = doc.splitTextToSize(llmCh5, CW);
+    for (const ln of ch5Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER VI: CHINESE ASTROLOGY (BAZI) — renumbered from IV
   // =======================================================================
@@ -1916,6 +1974,21 @@ export async function generateComprehensiveReport(
     }
   } else {
     y = body(y, "BaZi chart data was not available for this profile.");
+  }
+
+  // LLM synthesis for Chapter VI
+  onProgress?.({ stage: "AI analyzing BaZi pillars...", percent: 81 });
+  const baziPillars = baziData?.pillars || baziData || {};
+  const baziElems = baziData?.element_balance || baziData?.elements || {};
+  const llmCh6 = await llmGenerate(
+    `Write a 400-word BaZi Four Pillars analysis for ${firstName}. Day Master: ${dayMaster || "unknown"}. Analyze the Day Master's strength, element balance, and what the pillar interactions reveal about personality and destiny. If specific pillar data is limited, discuss the Day Master's implications broadly.`,
+    JSON.stringify({ day_master: dayMaster, pillars: baziPillars, elements: baziElems })
+  );
+  if (llmCh6) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch6Lines = doc.splitTextToSize(llmCh6, CW);
+    for (const ln of ch6Lines) { y = body(y, ln); }
   }
 
   // =======================================================================
@@ -2005,6 +2078,22 @@ export async function generateComprehensiveReport(
     }
   }
 
+  // LLM synthesis for Chapter VII
+  onProgress?.({ stage: "AI analyzing Chinese metaphysics...", percent: 82 });
+  const nsk = nineStarKi?.data ?? nineStarKi;
+  const nskStr = nsk ? `Year: ${nsk.year_star || "?"}, Month: ${nsk.month_star || "?"}` : "unavailable";
+  const ichStr = iChing ? `Hex: ${(iChing.data ?? iChing).hexagram || (iChing.data ?? iChing).name || "?"}` : "unavailable";
+  const llmCh7 = await llmGenerate(
+    `Write a 300-word synthesis of ${firstName}'s Chinese metaphysics supplementary readings. Nine Star Ki: ${nskStr}. I Ching birth hexagram: ${ichStr}. How do these supplementary systems enrich the BaZi picture? Connect to their Western placements where relevant.`,
+    JSON.stringify({ nineStarKi: nskStr, iChing: ichStr, has_fengShui: !!fengShui, day_master: dayMaster, sun_sign: sunSign })
+  );
+  if (llmCh7) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch7Lines = doc.splitTextToSize(llmCh7, CW);
+    for (const ln of ch7Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER VIII: HUMAN DESIGN — renumbered, now standalone
   // =======================================================================
@@ -2012,7 +2101,7 @@ export async function generateComprehensiveReport(
   y = 25;
   y = chapterTitle(y, "VIII", "Human Design", "Type, Strategy & Authority");
 
-  onProgress?.({ stage: "Writing Human Design...", percent: 81 });
+  onProgress?.({ stage: "Writing Human Design...", percent: 82 });
 
   if (hdData) {
     y = sectionHead(y, `Type: ${hdData.type || "Unknown"}`);
@@ -2062,6 +2151,23 @@ export async function generateComprehensiveReport(
     y = body(y, `Human Design data was not available. This system combines the I Ching, astrology, Kabbalah, and the Hindu-Brahmin chakra system into a unique framework for understanding individual design and decision-making authority.`);
   }
 
+  // LLM synthesis for Chapter VIII
+  onProgress?.({ stage: "AI analyzing Human Design...", percent: 83 });
+  const hdType = hdData?.type || "";
+  const hdAuth = hdData?.authority || "";
+  const hdProf = hdData?.profile || "";
+  const hdStrat = hdData?.strategy || "";
+  const llmCh8 = await llmGenerate(
+    `Write a 400-word Human Design analysis for ${firstName}. Type: ${hdType || "unknown"}. Authority: ${hdAuth || "unknown"}. Profile: ${hdProf || "unknown"}. Strategy: ${hdStrat || "unknown"}. Explain what this Type means for how they interact with the world, how Authority guides decision-making, and how the Profile shapes the life narrative. Connect to their ${sunSign} Sun and ${ascSign} Rising.`,
+    JSON.stringify({ type: hdType, authority: hdAuth, profile: hdProf, strategy: hdStrat, sun: sunSign, asc: ascSign })
+  );
+  if (llmCh8) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch8Lines = doc.splitTextToSize(llmCh8, CW);
+    for (const ln of ch8Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER IX: NUMEROLOGY
   // =======================================================================
@@ -2069,7 +2175,7 @@ export async function generateComprehensiveReport(
   y = 25;
   y = chapterTitle(y, "IX", "Numerology", "The Language of Numbers");
 
-  onProgress?.({ stage: "Writing numerology...", percent: 82 });
+  onProgress?.({ stage: "Writing numerology...", percent: 83 });
 
   // Life Path (already computed as lpSum)
   y = sectionHead(y, `Life Path Number: ${lpSum}`);
@@ -2122,6 +2228,23 @@ export async function generateComprehensiveReport(
     }
   }
 
+  // LLM synthesis for Chapter IX
+  onProgress?.({ stage: "AI analyzing numerology...", percent: 84 });
+  const numData = numerology?.data ?? numerology;
+  const lpNum = numData?.life_path || numData?.lifepath || lpSum;
+  const exprNum = numData?.expression || numData?.destiny || "";
+  const soulNum = numData?.soul_urge || numData?.heart || "";
+  const llmCh9 = await llmGenerate(
+    `Write a 300-word numerology reading for ${firstName}. Life Path: ${lpNum}. Expression: ${exprNum || "unknown"}. Soul Urge: ${soulNum || "unknown"}. How do these core numbers interact? What career, relationship, and life direction patterns emerge? Connect to their ${sunSign} Sun if relevant.`,
+    JSON.stringify({ life_path: lpNum, expression: exprNum, soul_urge: soulNum, sun_sign: sunSign })
+  );
+  if (llmCh9) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch9Lines = doc.splitTextToSize(llmCh9, CW);
+    for (const ln of ch9Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER X: MBTI & COGNITIVE FUNCTIONS — expanded from old V
   // =======================================================================
@@ -2129,7 +2252,7 @@ export async function generateComprehensiveReport(
   y = 25;
   y = chapterTitle(y, "X", "Personality \u2014 MBTI", "Cognitive Function Stack");
 
-  onProgress?.({ stage: "Writing personality analysis...", percent: 84 });
+  onProgress?.({ stage: "Writing personality analysis...", percent: 85 });
 
   y = sectionHead(y, `Derived Type: ${mbtiType}`);
   y = body(y, `Based on the natal chart \u2014 particularly the Sun sign, Moon sign, Mercury placement, and Ascendant \u2014 ${firstName}'s derived MBTI type is ${mbtiType}. This suggests a cognitive style oriented toward ${mbtiType.includes("N") ? "pattern recognition, abstract possibilities, and future-oriented thinking" : "concrete facts, practical realities, and present-focused observation"}, with decisions filtered through ${mbtiType.includes("F") ? "personal values, empathy, and interpersonal harmony" : "logical analysis, objectivity, and systematic evaluation"}.`);
@@ -2164,6 +2287,19 @@ export async function generateComprehensiveReport(
       const shadowDesc = typeof sd.shadow_functions === "string" ? sd.shadow_functions : Array.isArray(sd.shadow_functions) ? sd.shadow_functions.join(", ") : "";
       if (shadowDesc) y = body(y, `The shadow function stack \u2014 which emerges under stress \u2014 includes: ${shadowDesc}. These represent ${firstName}'s unconscious cognitive patterns.`);
     }
+  }
+
+  // LLM synthesis for Chapter X
+  onProgress?.({ stage: "AI analyzing MBTI type...", percent: 85 });
+  const llmCh10 = await llmGenerate(
+    `Write a 300-word MBTI analysis for ${firstName}, type ${mbtiType}. How does this type manifest in daily life? Connect to their astrological placements -- how does ${sunSign} Sun + ${moonSign} Moon + ${mbtiType} create a specific behavioral pattern? What are the cognitive strengths and blind spots?`,
+    JSON.stringify({ mbti: mbtiType, sun: sunSign, moon: moonSign, asc: ascSign })
+  );
+  if (llmCh10) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch10Lines = doc.splitTextToSize(llmCh10, CW);
+    for (const ln of ch10Lines) { y = body(y, ln); }
   }
 
   // =======================================================================
@@ -2218,6 +2354,24 @@ export async function generateComprehensiveReport(
     y = body(y, `Enneagram data was not available. The Enneagram describes nine personality types, each driven by a core fear and core desire, with specific paths of growth and stress.`);
   }
 
+  // LLM synthesis for Chapter XI
+  onProgress?.({ stage: "AI analyzing Enneagram...", percent: 86 });
+  const ennData = enneagram?.data ?? enneagram;
+  const ennType = ennData?.type || "";
+  const ennWing = ennData?.wing || "";
+  const ennTritype = ennData?.tritype || "";
+  const ennVariant = ennData?.instinct || ennData?.variant || "";
+  const llmCh11 = await llmGenerate(
+    `Write a 300-word Enneagram analysis for ${firstName}, Type ${ennType || "unknown"}${ennWing ? ` wing ${ennWing}` : ""}${ennTritype ? `, Tritype ${ennTritype}` : ""}${ennVariant ? `, ${ennVariant} variant` : ""}. Cover core motivation, core fear, integration and disintegration paths. How does this Enneagram type interact with their ${mbtiType} MBTI and ${sunSign} Sun?`,
+    JSON.stringify({ type: ennType, wing: ennWing, tritype: ennTritype, variant: ennVariant, mbti: mbtiType, sun: sunSign })
+  );
+  if (llmCh11) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch11Lines = doc.splitTextToSize(llmCh11, CW);
+    for (const ln of ch11Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER XII: JUNGIAN ARCHETYPES — expanded
   // =======================================================================
@@ -2225,7 +2379,7 @@ export async function generateComprehensiveReport(
   y = 25;
   y = chapterTitle(y, "XII", "Jungian Archetypes", "The Mythic Self");
 
-  onProgress?.({ stage: "Writing archetype analysis...", percent: 85 });
+  onProgress?.({ stage: "Writing archetype analysis...", percent: 86 });
 
   if (archetypes) {
     const ad = archetypes.data ?? archetypes;
@@ -2278,6 +2432,24 @@ export async function generateComprehensiveReport(
     }
   } else {
     y = body(y, `Jungian archetype data was not available. The 12 Jungian archetypes (Innocent, Orphan, Hero, Caregiver, Explorer, Rebel, Lover, Creator, Jester, Sage, Magician, Ruler) represent fundamental patterns of human motivation and behavior.`);
+  }
+
+  // LLM synthesis for Chapter XII
+  onProgress?.({ stage: "AI analyzing archetypes...", percent: 87 });
+  const archData = archetypes?.data ?? archetypes;
+  const archPrimary = archData?.primary || archData?.dominant || archData?.primary_archetype;
+  const archPriName = typeof archPrimary === "string" ? archPrimary : archPrimary?.name || archPrimary?.archetype || "";
+  const archShadow = archData?.shadow || archData?.shadow_archetype;
+  const archShadowName = typeof archShadow === "string" ? archShadow : archShadow?.name || archShadow?.archetype || "";
+  const llmCh12 = await llmGenerate(
+    `Write a 300-word Jungian archetype analysis for ${firstName}. Primary archetype: ${archPriName || "unknown"}. Shadow: ${archShadowName || "unknown"}. How do these archetypes manifest in daily life? What is the individuation journey -- how does integrating the Shadow lead to wholeness? Connect to their ${sunSign} Sun, ${moonSign} Moon, ${ascSign} Rising.`,
+    JSON.stringify({ primary: archPriName, shadow: archShadowName, sun: sunSign, moon: moonSign, asc: ascSign })
+  );
+  if (llmCh12) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch12Lines = doc.splitTextToSize(llmCh12, CW);
+    for (const ln of ch12Lines) { y = body(y, ln); }
   }
 
   // =======================================================================
@@ -2363,7 +2535,7 @@ export async function generateComprehensiveReport(
   y = 25;
   y = chapterTitle(y, "XIV", "Cosmic Weather", "Space Weather & Solar Activity");
 
-  onProgress?.({ stage: "Writing cosmic weather...", percent: 87 });
+  onProgress?.({ stage: "Writing cosmic weather...", percent: 88 });
 
   y = body(y, `Space weather \u2014 solar flares, geomagnetic storms, and cosmic ray flux \u2014 creates the electromagnetic environment in which all terrestrial life operates. Research increasingly suggests correlations between solar activity and human behavior, mood, and health patterns.`);
 
@@ -2423,6 +2595,21 @@ export async function generateComprehensiveReport(
     }
   }
 
+  // LLM synthesis for Chapter XIV
+  onProgress?.({ stage: "AI analyzing cosmic weather...", percent: 89 });
+  const swInfo = spaceWeather?.data ?? spaceWeather;
+  const kpVal = swInfo?.kp_index || swInfo?.kp || "";
+  const llmCh14 = await llmGenerate(
+    `Write a 200-word analysis of how current space weather and cosmic conditions affect ${firstName}'s chart. Kp index: ${kpVal || "unknown"}. Moon sign: ${moonSign} (${SIGN_ELEMENT[moonSign]} element). How might geomagnetic and solar activity affect someone with these specific placements?`,
+    JSON.stringify({ kp: kpVal, moon_sign: moonSign, moon_element: SIGN_ELEMENT[moonSign], sun_sign: sunSign })
+  );
+  if (llmCh14) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch14Lines = doc.splitTextToSize(llmCh14, CW);
+    for (const ln of ch14Lines) { y = body(y, ln); }
+  }
+
   // =======================================================================
   // CHAPTER XV: COSMIC TIMING — TRANSITS & RETURNS
   // =======================================================================
@@ -2430,7 +2617,7 @@ export async function generateComprehensiveReport(
   y = 25;
   y = chapterTitle(y, "XV", "Cosmic Timing", "Transits, Returns & Progressions");
 
-  onProgress?.({ stage: "Mapping cosmic timing...", percent: 89 });
+  onProgress?.({ stage: "Mapping cosmic timing...", percent: 90 });
 
   // Current Transits
   if (transits) {
@@ -2505,6 +2692,22 @@ export async function generateComprehensiveReport(
       }
       y = styledTable(y, ["Planet", "Progressed Sign", "Degree"], prRows.slice(0, 10));
     }
+  }
+
+  // LLM synthesis for Chapter XV
+  onProgress?.({ stage: "AI analyzing cosmic timing...", percent: 90 });
+  const prSunSign = progressions ? ((progressions.data ?? progressions).positions?.Sun || (progressions.data ?? progressions).progressed_positions?.Sun)?.sign || "" : "";
+  const prMoonSign = progressions ? ((progressions.data ?? progressions).positions?.Moon || (progressions.data ?? progressions).progressed_positions?.Moon)?.sign || "" : "";
+  const profLord = profection ? ((profection.data ?? profection).lord_of_year || (profection.data ?? profection).time_lord || "") : "";
+  const llmCh15 = await llmGenerate(
+    `Write a 400-word timing analysis for ${firstName}. Progressed Sun: ${prSunSign || "unknown"}. Progressed Moon: ${prMoonSign || "unknown"}. Annual profection lord: ${profLord || "unknown"}. Natal Sun: ${sunSign}. What are the major themes emerging? What opportunities and challenges lie ahead? Synthesize transits, progressions, and profections into timing advice.`,
+    JSON.stringify({ prog_sun: prSunSign, prog_moon: prMoonSign, profection_lord: profLord, natal_sun: sunSign, has_transits: !!transits, has_solar_return: !!solarReturn })
+  );
+  if (llmCh15) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch15Lines = doc.splitTextToSize(llmCh15, CW);
+    for (const ln of ch15Lines) { y = body(y, ln); }
   }
 
   // =======================================================================
@@ -2582,6 +2785,19 @@ export async function generateComprehensiveReport(
         y = bullet(y, typeof c === "string" ? c : `${c.theme || c.name || ""}: ${c.description || c.value || ""}`);
       }
     }
+  }
+
+  // LLM synthesis for Chapter XVI
+  onProgress?.({ stage: "AI analyzing predictive outlook...", percent: 92 });
+  const llmCh16 = await llmGenerate(
+    `Write a 300-word predictive outlook for ${firstName}. Natal Sun: ${sunSign}. Current retrogrades and electional data available: ${!!retrograde}, ${!!electional}. What timing advice can be given for the next 3-6 months based on transit patterns and progressions? Focus on actionable guidance.`,
+    JSON.stringify({ sun: sunSign, has_retro: !!retrograde, has_electional: !!electional, has_timing: !!timingConvergence })
+  );
+  if (llmCh16) {
+    y = divider(y);
+    y = sectionHead(y, "Synthesis & Analysis");
+    const ch16Lines = doc.splitTextToSize(llmCh16, CW);
+    for (const ln of ch16Lines) { y = body(y, ln); }
   }
 
   // =======================================================================
