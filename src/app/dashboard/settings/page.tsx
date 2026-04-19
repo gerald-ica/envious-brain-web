@@ -18,7 +18,7 @@ type AccentColor = "blue" | "purple" | "emerald" | "amber" | "rose";
 type Language = "EN" | "ES" | "FR" | "PT" | "ZH";
 
 const LLM_PROVIDERS: { id: LLMProvider; label: string; defaultModel: string }[] = [
-  { id: "vercel", label: "Vercel AI", defaultModel: "alibaba/qwen3.6-plus" },
+  { id: "vercel", label: "Vercel AI", defaultModel: "alibaba/qwen3.5-plus" },
   { id: "openai", label: "OpenAI", defaultModel: "gpt-4o" },
   { id: "anthropic", label: "Anthropic", defaultModel: "claude-sonnet-4-20250514" },
   { id: "openrouter", label: "OpenRouter", defaultModel: "auto" },
